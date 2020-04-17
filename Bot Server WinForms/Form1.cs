@@ -41,7 +41,7 @@ namespace Bot_Server_WinForms
             clientList.ToList().ForEach(
                             client =>
                             {
-                                client.SendMessage("Dit is een test");
+                                client.SendMessage("Start Trading");
                             });
         }
 
@@ -83,8 +83,17 @@ namespace Bot_Server_WinForms
             clientList.ToList().ForEach(
                 client =>
                {
-                   client.SendMessage("Close");
+                   client.SendMessage("Stop Trading");
                });
+        }
+
+        private void Form1_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            clientList.ToList().ForEach(
+                client =>
+                {
+                    client.SendMessage("Stopped Server");
+                });
         }
 
         //Class to handle each client request separatly
