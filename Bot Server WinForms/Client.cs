@@ -13,17 +13,24 @@ namespace Bot_Server_WinForms
     {
         public TcpClient tcpClient;
         public string clientId;
+        public string characterName;
+        public string email;
+        public string password;
 
         public Client(TcpClient tcpClient, string clNo)
         {
             this.tcpClient = tcpClient;
             this.clientId = clNo;
         }
-
+        public Client(string characterName, string email, string password)
+        {
+            this.characterName = characterName;
+            this.email = email;
+            this.password = password;
+        }
         public void Start()
         {
-            Log("Started!");
-            Form1.form.Invoke(new MethodInvoker(delegate ()
+             Form1.form.Invoke(new MethodInvoker(delegate ()
             {
                 Form1.form.clientList.Add(this);
             }));
@@ -33,22 +40,23 @@ namespace Bot_Server_WinForms
 
         public void Stop()
         {
-            Log("Stopped!");
+            this.tcpClient = null;
             Form1.form.Invoke(new MethodInvoker(delegate ()
             {
                 Form1.form.clientList.Remove(this);
             }));
+     
             Disconnect();
         }
 
         public void Connect()
         {
-            Form1.Log(" Client" + clientId + " connected!");
+            Form1.Log(characterName + " connected!");
         }
 
         public void Disconnect()
         {
-            Form1.Log(" client" + clientId + " disconnected!");
+            Form1.Log(characterName + " disconnected!");
         }
 
         private void StartListening()
@@ -91,13 +99,13 @@ namespace Bot_Server_WinForms
         {
             Form1.form.Invoke(new MethodInvoker(delegate ()
             {
-                Form1.form.textBoxLog.AppendText(" >> Client" + Convert.ToString(clientId) + ": " + log + Environment.NewLine);
+                Form1.form.textBoxLog.AppendText(" >> " + characterName + ": " + log + Environment.NewLine);
             }));
         }
 
         public override string ToString()
         {
-            return "Client" + clientId;
+            return characterName;
         }
     }
 }

@@ -1,0 +1,1 @@
+"C:\Program Files (x86)\AutoIt3\AutoIt3.exe" "C:\Users\thiba\OneDrive\Bureaublad\TCPConnect.au3" "Bob Snow"

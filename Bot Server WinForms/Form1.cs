@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -18,15 +20,21 @@ namespace Bot_Server_WinForms
     {
         public static Form1 form = null;
         public BindingList<Client> clientList = new BindingList<Client>();
-        //static List<HandleClient> handleClientList = new List<HandleClient>();
+        public List<Client> sourceClientList = new List<Client>();
+        public string sourceClientListFileLocation = "";
+        public string scriptFileLocation = "";
+        public string multiLauncherFileLocation = "";
 
         public Form1()
         {
             InitializeComponent();
             listBoxClients.DataSource = clientList;
-            listBoxClients.DisplayMember = "clNo";
+            listBoxClients.DisplayMember = "characterName";
             form = this;
+            this.readFileForClients();
+            this.checkedListBox1.Items.AddRange(sourceClientList.Select(x => x.characterName).ToArray());
         }
+
 
         private void buttonStartServer_Click(object sender, EventArgs e)
         {
@@ -59,7 +67,10 @@ namespace Bot_Server_WinForms
                 {
                     counter += 1;
                     TcpClient clientSocket = serverSocket.AcceptTcpClient();
-                    Client client = new Client(clientSocket, Convert.ToString(counter));
+                    var characterName = WaitForCharacterNameForClient(clientSocket);
+                    var client = sourceClientList.Where(x => x.characterName == characterName).FirstOrDefault();
+                    client.tcpClient = clientSocket;
+                    client.clientId = counter.ToString();
                     client.Connect();
                     client.Start();
                 }
@@ -94,6 +105,90 @@ namespace Bot_Server_WinForms
                 {
                     client.SendMessage("Stopped Server");
                 });
+        }
+
+        private void readFileForClients()
+        {
+            string line;
+
+            // Read the file and display it line by line.  
+            System.IO.StreamReader file =
+                new System.IO.StreamReader(@"X:\Guild wars\sourceClientList.txt");
+            while ((line = file.ReadLine()) != null)
+            {
+                var splittedLine = line.Split('|');
+                var email = splittedLine[0];
+                var password = splittedLine[1];
+                var characterName = splittedLine[2];
+                sourceClientList.Add(new Client(characterName, email, password));
+            }
+            file.Close();
+
+        }
+
+        private void buttonStartAllClients_Click(object sender, EventArgs e)
+        {
+
+            sourceClientList.Where(x => x.tcpClient == null).ToList().ForEach(client =>
+            {
+                using (Process pProcess = new Process())
+                {
+
+                    pProcess.StartInfo.FileName = @"C:\Program Files (x86)\AutoIt3\AutoIt3.exe";
+                    pProcess.StartInfo.Arguments = "C:\\Users\\thiba\\OneDrive\\Bureaublad\\TCPConnect.au3 \"" + client.characterName + "\""; //argument
+                    pProcess.StartInfo.UseShellExecute = true;
+                    //pProcess.StartInfo.RedirectStandardOutput = true;
+                    //pProcess.StartInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
+                    //pProcess.StartInfo.CreateNoWindow = true; //not diplay a windows
+                    //pProcess.StartInfo.Verb = "runas";
+                    pProcess.Start();
+
+                    //string output = pProcess.StandardOutput.ReadToEnd(); //The output result
+
+                }
+            });
+        }
+    public string WaitForCharacterNameForClient(TcpClient tcpClient)
+    {
+        byte[] bytesFrom = new byte[10025];
+        NetworkStream networkStream = tcpClient.GetStream();
+        networkStream.Read(bytesFrom, 0, bytesFrom.Length);
+        string dataFromClient = Encoding.ASCII.GetString(bytesFrom);
+        dataFromClient = dataFromClient.Substring(0, dataFromClient.IndexOf("\0"));
+        return dataFromClient;
+    }
+
+        private void buttonSelectSourceTxt_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog openFileDialog = new OpenFileDialog();
+                DialogResult result = openFileDialog.ShowDialog(); // Show the dialog.
+                if (result == DialogResult.OK) // Test result.
+                {
+                    sourceClientListFileLocation = openFileDialog.FileName;
+                    this.textBoxSelectedSourceAccounts.Text = sourceClientListFileLocation;
+                }
+        }
+
+        private void buttonSelectScript_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog openFileDialog = new OpenFileDialog();
+            DialogResult result = openFileDialog.ShowDialog(); // Show the dialog.
+            if (result == DialogResult.OK) // Test result.
+            {
+                scriptFileLocation = openFileDialog.FileName;
+                this.textBoxSelectedScript.Text = scriptFileLocation;
+            }
+        }
+
+        private void buttonSelectMultiLauncher_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog openFileDialog = new OpenFileDialog();
+            DialogResult result = openFileDialog.ShowDialog(); // Show the dialog.
+            if (result == DialogResult.OK) // Test result.
+            {
+                multiLauncherFileLocation = openFileDialog.FileName;
+                this.textBoxSelectedMultiLauncher.Text = multiLauncherFileLocation;
+            }
         }
 
         //Class to handle each client request separatly
