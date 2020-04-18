@@ -22,8 +22,6 @@ namespace Bot_Server_WinForms
         public BindingList<Client> clientList = new BindingList<Client>();
         public List<Client> sourceClientList = new List<Client>();
         public string sourceClientListFileLocation = "";
-        public string scriptFileLocation = "";
-        public string multiLauncherFileLocation = "";
 
         public Form1()
         {
@@ -31,26 +29,11 @@ namespace Bot_Server_WinForms
             listBoxClients.DataSource = clientList;
             listBoxClients.DisplayMember = "characterName";
             form = this;
-            this.readFileForClients();
-            this.checkedListBox1.Items.AddRange(sourceClientList.Select(x => x.characterName).ToArray());
-        }
-
-
-        private void buttonStartServer_Click(object sender, EventArgs e)
-        {
-            buttonStartServer.Enabled = false;
-            buttonStartServer.Text = "Started";
-            Log("Server Started");
-            Thread ctThread = new Thread(ListenToNewClients);
-            ctThread.Start();
-        }
-        private void buttonStartClients_Click(object sender, EventArgs e)
-        {
-            clientList.ToList().ForEach(
-                            client =>
-                            {
-                                client.SendMessage("Start Trading");
-                            });
+            Settings.Initalize();
+            this.ReadFileForClients();
+            this.checkedListBox1.Items.AddRange(sourceClientList.Where(x => x.tcpClient == null).Select(x => x.characterName).ToArray());
+            this.checkedListBox3.Items.AddRange(sourceClientList.Where(x => x.tcpClient != null).Select(x => x.characterName).ToArray());
+            this.checkedListBox2.Items.AddRange(sourceClientList.Where(x => x.tcpClient != null).Select(x => x.characterName).ToArray());
         }
 
         public void ListenToNewClients()
@@ -89,15 +72,189 @@ namespace Bot_Server_WinForms
             }));
         }
 
-        private void buttonStopClients_Click(object sender, EventArgs e)
+        #region Button Clicks
+        private void buttonStartServer_Click(object sender, EventArgs e)
         {
-            clientList.ToList().ForEach(
-                client =>
-               {
-                   client.SendMessage("Stop Trading");
-               });
+            StartServer();
         }
 
+        private void buttonSelectSourceTxt_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog openFileDialog = new OpenFileDialog();
+            DialogResult result = openFileDialog.ShowDialog(); // Show the dialog.
+            if (result == DialogResult.OK) // Test result.
+            {
+                Settings.SetSourceListFileLocation(openFileDialog.FileName);
+                ReadFileForClients();
+                this.checkedListBox1.Items.Clear();
+                this.checkedListBox1.Items.AddRange(sourceClientList.Select(x => x.characterName).ToArray());
+            }
+        }
+        private void buttonSelectScript_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog openFileDialog = new OpenFileDialog();
+            DialogResult result = openFileDialog.ShowDialog(); // Show the dialog.
+            if (result == DialogResult.OK) // Test result.
+            {
+                Settings.SetScriptFileLocation(openFileDialog.FileName);
+            }
+        }
+        private void buttonSelectMultiLauncher_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog openFileDialog = new OpenFileDialog();
+            DialogResult result = openFileDialog.ShowDialog(); // Show the dialog.
+            if (result == DialogResult.OK) // Test result.
+            {
+                Settings.SetMultiLauncherFileLocation(openFileDialog.FileName);
+            }
+        }
+        private void buttonSelectAutoLaunch_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog openFileDialog = new OpenFileDialog();
+            DialogResult result = openFileDialog.ShowDialog(); // Show the dialog.
+            if (result == DialogResult.OK) // Test result.
+            {
+                Settings.SetAutoLaunchFileLocation(openFileDialog.FileName);
+            }
+        }
+
+
+        private void buttonStartSelectedClients_Click(object sender, EventArgs e)
+        {
+            var checkedList = checkedListBox1.CheckedItems.Cast<string>().ToList();
+            foreach (string clientCharacterName in checkedList)
+            {
+                var client = sourceClientList.Where(x => x.characterName == clientCharacterName).FirstOrDefault();
+                if (client.tcpClient == null)
+                {
+                    StartClient(client);
+                }
+            }
+        }
+        private void buttonStartAllClients_Click(object sender, EventArgs e)
+        {
+
+            sourceClientList.Where(x => x.tcpClient == null).ToList().ForEach(client =>
+            {
+                StartClient(client);
+            });
+        }
+        private void buttonStopSelectedClients_Click(object sender, EventArgs e)
+        {
+            var checkedList = checkedListBox3.CheckedItems.Cast<string>().ToList();
+            foreach (string clientCharacterName in checkedList)
+            {
+                var client = sourceClientList.Where(x => x.characterName == clientCharacterName).FirstOrDefault();
+                if (client.tcpClient != null)
+                {
+                    client.SendMessage("Stop process");
+                }
+            }
+        }
+        private void buttonEndAllSelectedClients_Click(object sender, EventArgs e)
+        {
+            sourceClientList.Where(x => x.tcpClient == null).ToList().ForEach(client =>
+            {
+                client.SendMessage("Stop process");
+            });
+        }
+
+
+        private void buttonStartTradeAllClients_Click(object sender, EventArgs e)
+        {
+            var checkedList = checkedListBox2.Items.Cast<string>().ToList();
+            foreach (string clientCharacterName in checkedList)
+            {
+                var client = sourceClientList.Where(x => x.characterName == clientCharacterName).FirstOrDefault();
+                client.SendMessage("Start Trading");
+
+            }
+        }
+        private void buttonStopTradeClients_Click(object sender, EventArgs e)
+        {
+
+            var checkedListTrade = checkedListBox2.Items.Cast<string>().ToList();
+            foreach (string clientCharacterName in checkedListTrade)
+            {
+                var client = sourceClientList.Where(x => x.characterName == clientCharacterName).FirstOrDefault();
+                client.SendMessage("Stop Trading");
+
+            }
+        }
+        private void buttonStartTradeSelectedClients_Click(object sender, EventArgs e)
+        {
+            var checkedList = checkedListBox2.CheckedItems.Cast<string>().ToList();
+            foreach (string clientCharacterName in checkedList)
+            {
+                var client = sourceClientList.Where(x => x.characterName == clientCharacterName).FirstOrDefault();
+                client.SendMessage("Start Trading");
+
+            }
+        }
+
+        #endregion
+
+        #region Helper Functions
+        private void ReadFileForClients()
+        {
+            string line;
+            sourceClientList = new List<Client>();
+            // Read the file and display it line by line.  
+            if (File.Exists(Settings.settings.sourceClientListFileLocation))
+            {
+                System.IO.StreamReader file =
+                    new System.IO.StreamReader(Settings.settings.sourceClientListFileLocation);
+                while ((line = file.ReadLine()) != null)
+                {
+                    var splittedLine = line.Split('|');
+                    var email = splittedLine[0];
+                    var password = splittedLine[1];
+                    var characterName = splittedLine[2];
+                    var gameClient = splittedLine[3];
+                    sourceClientList.Add(new Client(characterName, email, password, gameClient));
+                }
+                file.Close();
+            }
+
+        }
+        public string WaitForCharacterNameForClient(TcpClient tcpClient)
+        {
+            byte[] bytesFrom = new byte[10025];
+            NetworkStream networkStream = tcpClient.GetStream();
+            networkStream.Read(bytesFrom, 0, bytesFrom.Length);
+            string dataFromClient = Encoding.ASCII.GetString(bytesFrom);
+            dataFromClient = dataFromClient.Substring(0, dataFromClient.IndexOf("\0"));
+            return dataFromClient;
+        }
+
+        public void StartServer()
+        {
+            buttonStartServer.Enabled = false;
+            buttonStartServer.Text = "Started";
+            Log("Server Started");
+            Thread ctThread = new Thread(ListenToNewClients);
+            ctThread.Start();
+        }
+
+        public void StartClient(Client client)
+        {
+            using (Process pProcess = new Process())
+            {
+
+                pProcess.StartInfo.FileName = @"C:\Program Files (x86)\AutoIt3\AutoIt3.exe";
+                pProcess.StartInfo.Arguments = "\"" + Settings.GetAutoLaunchFileLocation() + "\" \"" + Settings.GetMultiLauncherFileLocation() + "\" \"" + client.gameClient +"\" \"" + client.email + "\" \"" + client.password + "\" \"" + client.characterName + "\" \"" + Settings.GetScriptFileLocation() + "\" \"" + this.checkBoxMinimizedClient.Checked + "\""; //argument
+                pProcess.StartInfo.UseShellExecute = true;
+                //pProcess.StartInfo.RedirectStandardOutput = true;
+                //pProcess.StartInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
+                //pProcess.StartInfo.CreateNoWindow = true; //not diplay a windows
+                //pProcess.StartInfo.Verb = "runas";
+                pProcess.Start();
+                //string output = pProcess.StandardOutput.ReadToEnd(); //The output result
+            }
+        }
+        #endregion
+
+        #region Form Handlers
         private void Form1_FormClosed(object sender, FormClosedEventArgs e)
         {
             clientList.ToList().ForEach(
@@ -106,160 +263,79 @@ namespace Bot_Server_WinForms
                     client.SendMessage("Stopped Server");
                 });
         }
-
-        private void readFileForClients()
+        private void Form1_Load(object sender, EventArgs e)
         {
-            string line;
-
-            // Read the file and display it line by line.  
-            System.IO.StreamReader file =
-                new System.IO.StreamReader(@"X:\Guild wars\sourceClientList.txt");
-            while ((line = file.ReadLine()) != null)
-            {
-                var splittedLine = line.Split('|');
-                var email = splittedLine[0];
-                var password = splittedLine[1];
-                var characterName = splittedLine[2];
-                sourceClientList.Add(new Client(characterName, email, password));
-            }
-            file.Close();
-
+            StartServer();
         }
 
-        private void buttonStartAllClients_Click(object sender, EventArgs e)
-        {
+        #endregion
 
-            sourceClientList.Where(x => x.tcpClient == null).ToList().ForEach(client =>
-            {
-                using (Process pProcess = new Process())
-                {
 
-                    pProcess.StartInfo.FileName = @"C:\Program Files (x86)\AutoIt3\AutoIt3.exe";
-                    pProcess.StartInfo.Arguments = "C:\\Users\\thiba\\OneDrive\\Bureaublad\\TCPConnect.au3 \"" + client.characterName + "\""; //argument
-                    pProcess.StartInfo.UseShellExecute = true;
-                    //pProcess.StartInfo.RedirectStandardOutput = true;
-                    //pProcess.StartInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
-                    //pProcess.StartInfo.CreateNoWindow = true; //not diplay a windows
-                    //pProcess.StartInfo.Verb = "runas";
-                    pProcess.Start();
-
-                    //string output = pProcess.StandardOutput.ReadToEnd(); //The output result
-
-                }
-            });
-        }
-    public string WaitForCharacterNameForClient(TcpClient tcpClient)
-    {
-        byte[] bytesFrom = new byte[10025];
-        NetworkStream networkStream = tcpClient.GetStream();
-        networkStream.Read(bytesFrom, 0, bytesFrom.Length);
-        string dataFromClient = Encoding.ASCII.GetString(bytesFrom);
-        dataFromClient = dataFromClient.Substring(0, dataFromClient.IndexOf("\0"));
-        return dataFromClient;
     }
 
-        private void buttonSelectSourceTxt_Click(object sender, EventArgs e)
-        {
-            OpenFileDialog openFileDialog = new OpenFileDialog();
-                DialogResult result = openFileDialog.ShowDialog(); // Show the dialog.
-                if (result == DialogResult.OK) // Test result.
-                {
-                    sourceClientListFileLocation = openFileDialog.FileName;
-                    this.textBoxSelectedSourceAccounts.Text = sourceClientListFileLocation;
-                }
-        }
+    //Class to handle each client request separatly
+    //public class HandleClient
+    //{
+    //    public TcpClient tcpClient;
+    //    public string clNo;
+    //    public void StartClient(TcpClient tcpClient, string clineNo)
+    //    {
+    //        this.tcpClient = tcpClient;
+    //        this.clNo = clineNo;
+    //        form.Invoke(new MethodInvoker(delegate ()
+    //        {
+    //            form.handleClientList.Add(this);
 
-        private void buttonSelectScript_Click(object sender, EventArgs e)
-        {
-            OpenFileDialog openFileDialog = new OpenFileDialog();
-            DialogResult result = openFileDialog.ShowDialog(); // Show the dialog.
-            if (result == DialogResult.OK) // Test result.
-            {
-                scriptFileLocation = openFileDialog.FileName;
-                this.textBoxSelectedScript.Text = scriptFileLocation;
-            }
-        }
+    //        }));
+    //        Thread ctThread = new Thread(DoSomething);
+    //        ctThread.Start();
+    //    }
 
-        private void buttonSelectMultiLauncher_Click(object sender, EventArgs e)
-        {
-            OpenFileDialog openFileDialog = new OpenFileDialog();
-            DialogResult result = openFileDialog.ShowDialog(); // Show the dialog.
-            if (result == DialogResult.OK) // Test result.
-            {
-                multiLauncherFileLocation = openFileDialog.FileName;
-                this.textBoxSelectedMultiLauncher.Text = multiLauncherFileLocation;
-            }
-        }
+    //    public void DoSomething()
+    //    {
+    //        byte[] bytesFrom = new byte[10025];
+    //        int requestCount = 0;
 
-        //Class to handle each client request separatly
-        //public class HandleClient
-        //{
-        //    public TcpClient tcpClient;
-        //    public string clNo;
-        //    public void StartClient(TcpClient tcpClient, string clineNo)
-        //    {
-        //        this.tcpClient = tcpClient;
-        //        this.clNo = clineNo;
-        //        form.Invoke(new MethodInvoker(delegate ()
-        //        {
-        //            form.handleClientList.Add(this);
+    //        while (true)
+    //        {
+    //            try
+    //            {
+    //                requestCount += 1;
+    //                NetworkStream networkStream = tcpClient.GetStream();
+    //                networkStream.Read(bytesFrom, 0, bytesFrom.Length);
+    //                string dataFromClient = System.Text.Encoding.ASCII.GetString(bytesFrom);
+    //                dataFromClient = dataFromClient.Substring(0, dataFromClient.IndexOf("$"));
+    //                Console.WriteLine(" >> " + "From client-" + clNo + dataFromClient);
 
-        //        }));
-        //        Thread ctThread = new Thread(DoSomething);
-        //        ctThread.Start();
-        //    }
+    //                string rCount = Convert.ToString(requestCount);
+    //                string serverResponse = "Server to client(" + clNo + ") " + rCount;
+    //                byte[] sendBytes = Encoding.ASCII.GetBytes(serverResponse);
+    //                networkStream.Write(sendBytes, 0, sendBytes.Length);
+    //                networkStream.Flush();
+    //                Console.WriteLine(" >> " + serverResponse);
+    //            }
+    //            catch (Exception ex)
+    //            {
+    //                form.Invoke(new MethodInvoker(delegate ()
+    //                {
+    //                    form.textBoxLog.AppendText(" >> Client No:" + Convert.ToString(clNo) + " disconnected!" + Environment.NewLine);
+    //                }));
 
-        //    public override string ToString()
-        //    {
-        //        return clNo.ToString();
-        //    }
+    //                form.Invoke(new MethodInvoker(delegate ()
+    //                {
+    //                    form.handleClientList.Remove(this);
+    //                }));
+    //                break;
+    //            }
+    //        }
+    //    }
 
-        //    public void DoSomething()
-        //    {
-        //        byte[] bytesFrom = new byte[10025];
-        //        int requestCount = 0;
-
-        //        while (true)
-        //        {
-        //            try
-        //            {
-        //                requestCount += 1;
-        //                NetworkStream networkStream = tcpClient.GetStream();
-        //                networkStream.Read(bytesFrom, 0, bytesFrom.Length);
-        //                string dataFromClient = System.Text.Encoding.ASCII.GetString(bytesFrom);
-        //                dataFromClient = dataFromClient.Substring(0, dataFromClient.IndexOf("$"));
-        //                Console.WriteLine(" >> " + "From client-" + clNo + dataFromClient);
-
-        //                string rCount = Convert.ToString(requestCount);
-        //                string serverResponse = "Server to client(" + clNo + ") " + rCount;
-        //                byte[] sendBytes = Encoding.ASCII.GetBytes(serverResponse);
-        //                networkStream.Write(sendBytes, 0, sendBytes.Length);
-        //                networkStream.Flush();
-        //                Console.WriteLine(" >> " + serverResponse);
-        //            }
-        //            catch (Exception ex)
-        //            {
-        //                form.Invoke(new MethodInvoker(delegate ()
-        //                {
-        //                    form.textBoxLog.AppendText(" >> Client No:" + Convert.ToString(clNo) + " disconnected!" + Environment.NewLine);
-        //                }));
-
-        //                form.Invoke(new MethodInvoker(delegate ()
-        //                {
-        //                    form.handleClientList.Remove(this);
-        //                }));
-        //                break;
-        //            }
-        //        }
-        //    }
-
-        //    public void SendMessage(string text)
-        //    {
-        //        NetworkStream networkStream = tcpClient.GetStream();
-        //        byte[] sendBytes = Encoding.ASCII.GetBytes(text);
-        //        networkStream.Write(sendBytes, 0, sendBytes.Length);
-        //        networkStream.Flush();
-        //    }
-        //}
-    }
+    //    public void SendMessage(string text)
+    //    {
+    //        NetworkStream networkStream = tcpClient.GetStream();
+    //        byte[] sendBytes = Encoding.ASCII.GetBytes(text);
+    //        networkStream.Write(sendBytes, 0, sendBytes.Length);
+    //        networkStream.Flush();
+    //    }
+    //}
 }
