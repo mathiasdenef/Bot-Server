@@ -22,6 +22,7 @@ namespace Bot_Server_WinForms
         public BindingList<Client> clientList = new BindingList<Client>();
         public List<Client> sourceClientList = new List<Client>();
         public string sourceClientListFileLocation = "";
+        private BindingSource bindingSource1 = new BindingSource();
 
         public Form1()
         {
@@ -34,6 +35,7 @@ namespace Bot_Server_WinForms
             this.checkedListBox1.Items.AddRange(sourceClientList.Where(x => x.tcpClient == null).Select(x => x.characterName).ToArray());
             this.checkedListBox3.Items.AddRange(sourceClientList.Where(x => x.tcpClient != null).Select(x => x.characterName).ToArray());
             this.checkedListBox2.Items.AddRange(sourceClientList.Where(x => x.tcpClient != null).Select(x => x.characterName).ToArray());
+            this.Load += new System.EventHandler(Data_Load);
         }
 
         public void ListenToNewClients()
@@ -251,6 +253,21 @@ namespace Bot_Server_WinForms
                 pProcess.Start();
                 //string output = pProcess.StandardOutput.ReadToEnd(); //The output result
             }
+        }
+        private void Data_Load(object sender, System.EventArgs e)
+        {
+            // Populate the data source.
+            bindingSource1.Add(new Client() { characterName = "Bob", warSupplies = 10, succesRuns = 20, failRuns = 30 });
+            bindingSource1.Add(new Client() { characterName = "Snow", warSupplies = 20, succesRuns = 45, failRuns = 3045 });
+            bindingSource1.Add(new Client() { characterName = "Prop", warSupplies = 60, succesRuns = 686, failRuns = 455 });
+            bindingSource1.Add(new Client() { characterName = "Dana", warSupplies = 404, succesRuns = 489, failRuns = 879 });
+            bindingSource1.Add(new Client() { characterName = "WILLY", warSupplies = 778, succesRuns = 456, failRuns = 787 });
+
+            // Initialize the DataGridView.
+            dataGridView1.AutoGenerateColumns = true;
+            dataGridView1.AutoSize = true;
+            dataGridView1.DataSource = bindingSource1;
+
         }
         #endregion
 

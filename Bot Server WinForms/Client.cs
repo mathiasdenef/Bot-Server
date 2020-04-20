@@ -11,15 +11,15 @@ namespace Bot_Server_WinForms
 {
     public class Client
     {
-        public TcpClient tcpClient;
-        public string clientId;
-        public string characterName;
-        public string email;
-        public string password;
-        public string gameClient;
-        public int warSupplies;
-        public int succesRuns;
-        public int failRuns;
+        public TcpClient tcpClient { get; set; }
+        public string clientId { get; set; }
+        public string characterName { get; set; }
+        public string email { get; set; }
+        public string password { get; set; }
+        public string gameClient { get; set; }
+        public int warSupplies { get; set; }
+        public int succesRuns { get; set; }
+        public int failRuns { get; set; }
 
         public Client(TcpClient tcpClient, string clNo)
         {
@@ -33,6 +33,9 @@ namespace Bot_Server_WinForms
             this.password = password;
             this.gameClient = gameClient;
         }
+
+        public Client()
+        { }
         public void Start()
         {
              Form1.form.Invoke(new MethodInvoker(delegate ()
