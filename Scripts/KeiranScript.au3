@@ -61,15 +61,6 @@ $CharacterName = $CmdLine[1]
 GUICtrlSetData(-1, "")
 GUISetState(@SW_SHOW)
 #EndRegion ### END Koda GUI section ###
-
-
-
-GUICtrlSetOnEvent($ButtonStart, "EventHandler")
-GUICtrlSetOnEvent($CheckboxGraphics, "EventHandler")
-GUICtrlSetOnEvent($CheckboxTrade, "EventHandler")
-GUISetOnEvent($gui_event_close, "EventHandler")
-
-Global $CharName = $CharacterName
 ;~ Global $fLog = FileOpen("Keiran - Runner " & $CharName & ".log", 1) ;Log file
 Global $boolrun = False
 Global $gwpid = -1
@@ -114,6 +105,19 @@ Global $serverSocket = Null
 Global $goTrade
 Global $tradeAgent
 
+
+
+GUICtrlSetOnEvent($ButtonStart, "EventHandler")
+GUICtrlSetOnEvent($CheckboxGraphics, "EventHandler")
+GUICtrlSetOnEvent($CheckboxTrade, "EventHandler")
+GUISetOnEvent($gui_event_close, "EventHandler")
+
+
+Sleep(1000)
+ControlClick("", "", "Start", "")
+
+
+
 While 1
 	If $boolrun Then
 		GUICtrlSetData($LabelWarSupplies, $warsupplies / 250)
@@ -132,20 +136,20 @@ Func EventHandler()
 		Case $ButtonStart
 			GUICtrlSetData($ButtonStart, "Initializing...")
 			GUICtrlSetState($ButtonStart, $gui_disable)
-			If initialize($CharName, True, True, True) = False Then
+			If initialize($CharacterName, True, True, True) = False Then
 				MsgBox(0, "Error", "Can't find a Guild Wars client with that character name.")
 				Exit
 			EndIf
 			$boolrun = True
 			$gwpid = ProcessExists("gw.exe")
-			WinSetTitle($Form, "", "Keiran - " & $CharName)
+			WinSetTitle($Form, "", "Keiran - " & $CharacterName)
 			GUICtrlSetData($ButtonStart, "Bot Started")
 			AdlibRegister("TimerUpdater", 1000)
 			FindWarSupplies()
 			setmaxmemory()
 			SetPlayerStatus(0)
 			AdlibRegister("ListenToServer")
-			AdlibRegister("SendStatsToServer",60000)
+			;~ AdlibRegister("SendStatsToServer",60000)
 		Case $ButtonMaxMemory
 			setmaxmemory()
 		Case $CheckboxGraphics

@@ -229,6 +229,8 @@
             // checkBoxMinimizedClient
             // 
             this.checkBoxMinimizedClient.AutoSize = true;
+            this.checkBoxMinimizedClient.Checked = true;
+            this.checkBoxMinimizedClient.CheckState = System.Windows.Forms.CheckState.Checked;
             this.checkBoxMinimizedClient.Location = new System.Drawing.Point(18, 112);
             this.checkBoxMinimizedClient.Name = "checkBoxMinimizedClient";
             this.checkBoxMinimizedClient.Size = new System.Drawing.Size(124, 17);
@@ -475,7 +477,6 @@
         private System.Windows.Forms.TabControl tabControl1;
         private System.Windows.Forms.TabPage tabPage1;
         private System.Windows.Forms.TabPage tabPage2;
-
     }
 }
 

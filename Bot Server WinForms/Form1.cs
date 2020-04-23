@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,9 +22,8 @@ namespace Bot_Server_WinForms
         public static Form1 form = null;
         public BindingList<Client> clientList = new BindingList<Client>();
         public List<Client> sourceClientList = new List<Client>();
-        public string sourceClientListFileLocation = "";
         private BindingSource bindingSource1 = new BindingSource();
-
+      
         public Form1()
         {
             InitializeComponent();
@@ -124,22 +124,37 @@ namespace Bot_Server_WinForms
         private void buttonStartSelectedClients_Click(object sender, EventArgs e)
         {
             var checkedList = checkedListBox1.CheckedItems.Cast<string>().ToList();
-            foreach (string clientCharacterName in checkedList)
+            ThreadStart ths = new ThreadStart(() =>
             {
-                var client = sourceClientList.Where(x => x.characterName == clientCharacterName).FirstOrDefault();
-                if (client.tcpClient == null)
+
+                foreach (string clientCharacterName in checkedList)
                 {
-                    StartClient(client);
+                    var client = sourceClientList.Where(x => x.characterName == clientCharacterName).FirstOrDefault();
+                    if (client.tcpClient == null)
+                    {
+
+                        StartClient(client);
+                        Thread.Sleep(10000);
+                    }
                 }
-            }
+            });
+            Thread th = new Thread(ths);
+            th.Start();
         }
         private void buttonStartAllClients_Click(object sender, EventArgs e)
         {
-
-            sourceClientList.Where(x => x.tcpClient == null).ToList().ForEach(client =>
+            ThreadStart ths = new ThreadStart(() =>
             {
-                StartClient(client);
+
+                sourceClientList.Where(x => x.tcpClient == null).ToList().ForEach(client =>
+                {
+                    StartClient(client);
+                    Thread.Sleep(10000);
+                });
             });
+
+            Thread th = new Thread(ths);
+            th.Start();
         }
         private void buttonStopSelectedClients_Click(object sender, EventArgs e)
         {
@@ -240,18 +255,45 @@ namespace Bot_Server_WinForms
 
         public void StartClient(Client client)
         {
-            using (Process pProcess = new Process())
+            using (Process cProcess = new Process())
             {
 
-                pProcess.StartInfo.FileName = @"C:\Program Files (x86)\AutoIt3\AutoIt3.exe";
-                pProcess.StartInfo.Arguments = "\"" + Settings.GetAutoLaunchFileLocation() + "\" \"" + Settings.GetMultiLauncherFileLocation() + "\" \"" + client.gameClient +"\" \"" + client.email + "\" \"" + client.password + "\" \"" + client.characterName + "\" \"" + Settings.GetScriptFileLocation() + "\" \"" + this.checkBoxMinimizedClient.Checked + "\""; //argument
-                pProcess.StartInfo.UseShellExecute = true;
+                //pProcess.StartInfo.FileName = @Settings.GetMultiLauncherFileLocation();
+                cProcess.StartInfo.FileName = @"C:\Program Files (x86)\AutoIt3\AutoIt3.exe";
+                cProcess.StartInfo.Arguments = "\"" + Settings.GetAutoLaunchFileLocation() + "\" \"" + Settings.GetMultiLauncherFileLocation() + "\" \"" + client.gameClient + "\" \"" + client.email + "\" \"" + client.password + "\" \"" + client.characterName + "\" \"" + this.checkBoxMinimizedClient.Checked + "\"";
+                //pProcess.StartInfo.UseShellExecute = true;
                 //pProcess.StartInfo.RedirectStandardOutput = true;
                 //pProcess.StartInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
                 //pProcess.StartInfo.CreateNoWindow = true; //not diplay a windows
-                //pProcess.StartInfo.Verb = "runas";
-                pProcess.Start();
-                //string output = pProcess.StandardOutput.ReadToEnd(); //The output result
+                //cProcess.StartInfo.Verb = "runas";
+                cProcess.Start();
+
+                do
+                {
+                    Thread.Sleep(1000);
+                }
+                while (!cProcess.HasExited);
+
+
+                using (Process sProcess = new Process())
+                {
+
+                    //pProcess.StartInfo.FileName = @Settings.GetMultiLauncherFileLocation();
+                    sProcess.StartInfo.FileName = @"C:\Program Files (x86)\AutoIt3\AutoIt3.exe";
+                    sProcess.StartInfo.Arguments = "\"" + Settings.GetScriptFileLocation() + "\" \"" + client.characterName + "\"";
+                    //pProcess.StartInfo.UseShellExecute = true;
+                    //pProcess.StartInfo.RedirectStandardOutput = true;
+                    //pProcess.StartInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
+                    //pProcess.StartInfo.CreateNoWindow = true; //not diplay a windows
+                    sProcess.StartInfo.Verb = "runas";
+                    sProcess.Start();
+
+                    do
+                    {
+                        Thread.Sleep(1000);
+                    }
+                    while (client.tcpClient == null);
+                }
             }
         }
         private void Data_Load(object sender, System.EventArgs e)
@@ -285,74 +327,90 @@ namespace Bot_Server_WinForms
             StartServer();
         }
 
+
         #endregion
 
+        private void buttonTestClick_Click(object sender, EventArgs e)
+        {
+            using (Process pProcess = new Process())
+            {
 
+                pProcess.StartInfo.FileName = @"C:\Program Files (x86)\AutoIt3\AutoIt3.exe";
+                //pProcess.StartInfo.Arguments = "\"" + Settings.GetAutoLaunchFileLocation() + "\" \"" + Settings.GetMultiLauncherFileLocation() + "\" \"" + client.gameClient + "\" \"" + client.email + "\" \"" + client.password + "\" \"" + client.characterName + "\" \"" + Settings.GetScriptFileLocation() + "\" \"" + this.checkBoxMinimizedClient.Checked + "\""; //argument
+                pProcess.StartInfo.UseShellExecute = true;
+                //pProcess.StartInfo.RedirectStandardOutput = true;
+                //pProcess.StartInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
+                //pProcess.StartInfo.CreateNoWindow = true; //not diplay a windows
+                pProcess.StartInfo.Verb = "runas";
+                pProcess.Start();
+
+            }
+        }
+
+        //Class to handle each client request separatly
+        //public class HandleClient
+        //{
+        //    public TcpClient tcpClient;
+        //    public string clNo;
+        //    public void StartClient(TcpClient tcpClient, string clineNo)
+        //    {
+        //        this.tcpClient = tcpClient;
+        //        this.clNo = clineNo;
+        //        form.Invoke(new MethodInvoker(delegate ()
+        //        {
+        //            form.handleClientList.Add(this);
+
+        //        }));
+        //        Thread ctThread = new Thread(DoSomething);
+        //        ctThread.Start();
+        //    }
+
+        //    public void DoSomething()
+        //    {
+        //        byte[] bytesFrom = new byte[10025];
+        //        int requestCount = 0;
+
+        //        while (true)
+        //        {
+        //            try
+        //            {
+        //                requestCount += 1;
+        //                NetworkStream networkStream = tcpClient.GetStream();
+        //                networkStream.Read(bytesFrom, 0, bytesFrom.Length);
+        //                string dataFromClient = System.Text.Encoding.ASCII.GetString(bytesFrom);
+        //                dataFromClient = dataFromClient.Substring(0, dataFromClient.IndexOf("$"));
+        //                Console.WriteLine(" >> " + "From client-" + clNo + dataFromClient);
+
+        //                string rCount = Convert.ToString(requestCount);
+        //                string serverResponse = "Server to client(" + clNo + ") " + rCount;
+        //                byte[] sendBytes = Encoding.ASCII.GetBytes(serverResponse);
+        //                networkStream.Write(sendBytes, 0, sendBytes.Length);
+        //                networkStream.Flush();
+        //                Console.WriteLine(" >> " + serverResponse);
+        //            }
+        //            catch (Exception ex)
+        //            {
+        //                form.Invoke(new MethodInvoker(delegate ()
+        //                {
+        //                    form.textBoxLog.AppendText(" >> Client No:" + Convert.ToString(clNo) + " disconnected!" + Environment.NewLine);
+        //                }));
+
+        //                form.Invoke(new MethodInvoker(delegate ()
+        //                {
+        //                    form.handleClientList.Remove(this);
+        //                }));
+        //                break;
+        //            }
+        //        }
+        //    }
+
+        //    public void SendMessage(string text)
+        //    {
+        //        NetworkStream networkStream = tcpClient.GetStream();
+        //        byte[] sendBytes = Encoding.ASCII.GetBytes(text);
+        //        networkStream.Write(sendBytes, 0, sendBytes.Length);
+        //        networkStream.Flush();
+        //    }
+        //}
     }
-
-    //Class to handle each client request separatly
-    //public class HandleClient
-    //{
-    //    public TcpClient tcpClient;
-    //    public string clNo;
-    //    public void StartClient(TcpClient tcpClient, string clineNo)
-    //    {
-    //        this.tcpClient = tcpClient;
-    //        this.clNo = clineNo;
-    //        form.Invoke(new MethodInvoker(delegate ()
-    //        {
-    //            form.handleClientList.Add(this);
-
-    //        }));
-    //        Thread ctThread = new Thread(DoSomething);
-    //        ctThread.Start();
-    //    }
-
-    //    public void DoSomething()
-    //    {
-    //        byte[] bytesFrom = new byte[10025];
-    //        int requestCount = 0;
-
-    //        while (true)
-    //        {
-    //            try
-    //            {
-    //                requestCount += 1;
-    //                NetworkStream networkStream = tcpClient.GetStream();
-    //                networkStream.Read(bytesFrom, 0, bytesFrom.Length);
-    //                string dataFromClient = System.Text.Encoding.ASCII.GetString(bytesFrom);
-    //                dataFromClient = dataFromClient.Substring(0, dataFromClient.IndexOf("$"));
-    //                Console.WriteLine(" >> " + "From client-" + clNo + dataFromClient);
-
-    //                string rCount = Convert.ToString(requestCount);
-    //                string serverResponse = "Server to client(" + clNo + ") " + rCount;
-    //                byte[] sendBytes = Encoding.ASCII.GetBytes(serverResponse);
-    //                networkStream.Write(sendBytes, 0, sendBytes.Length);
-    //                networkStream.Flush();
-    //                Console.WriteLine(" >> " + serverResponse);
-    //            }
-    //            catch (Exception ex)
-    //            {
-    //                form.Invoke(new MethodInvoker(delegate ()
-    //                {
-    //                    form.textBoxLog.AppendText(" >> Client No:" + Convert.ToString(clNo) + " disconnected!" + Environment.NewLine);
-    //                }));
-
-    //                form.Invoke(new MethodInvoker(delegate ()
-    //                {
-    //                    form.handleClientList.Remove(this);
-    //                }));
-    //                break;
-    //            }
-    //        }
-    //    }
-
-    //    public void SendMessage(string text)
-    //    {
-    //        NetworkStream networkStream = tcpClient.GetStream();
-    //        byte[] sendBytes = Encoding.ASCII.GetBytes(text);
-    //        networkStream.Write(sendBytes, 0, sendBytes.Length);
-    //        networkStream.Flush();
-    //    }
-    //}
 }
