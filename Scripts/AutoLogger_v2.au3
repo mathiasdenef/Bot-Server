@@ -4,28 +4,29 @@ Opt("TrayIconDebug",1)
 #RequireAdmin
 #include <GWA2.au3>
 #include <MsgBoxConstants.au3>
+
 ;MADE BY SOME SEXY BEAST NAMED 4D 1,
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; SETUP HERE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+Global $AmountofAccs = 1;Amount of accounts you want to set
+
 Global $GWCA = False ; IF you are running a GWCA bot, will inject Graphics.dll in same folder as script.
 
 Global $GWMLPath = $CmdLine[1] ; Path to Guild Wars Multi Launch
-;Global $GWMLPath = "C:\Users\thiba\OneDrive\Bureaublad\GWMultiLaunch\GWMultiLaunch.exe"
 Global $GWPath = $CmdLine[2] ;Array of Paths to your Gw.exe's
-;Global $GWPath = "C:\Program Files (x86)\Guild Wars\Gw.exe"
 Global $Email = $CmdLine[3]
-;Global $Email = "angularmaster8@hotmail.com"
 Global $Password = $CmdLine[4]
-;Global $Password = "Orian425"
 Global $Character = $CmdLine[5]
-;Global $Character = "Antoine Tursa"
-Global $BotPath = $CmdLine[6]
-;Global $BotPath = "C:\Users\thiba\OneDrive\Bureaublad\KeiranScript.au3"
-Global $MinimizeClient = $CmdLine[7]
-;Global $MinimizeClient = false
+Global $MinimizeClient = $CmdLine[6]
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
 
 Global $CurPID,$CurBotPID,$Path,$CurHwnd
+
+For $i = 0 To $AmountofAccs - 1
+
 #Region Declarations
 Local $mKernelHandle
 Local $mGWProcHandle
@@ -100,12 +101,7 @@ If $MinimizeClient = "True" Then
 	WinSetState($hWnd, "", @SW_MINIMIZE)
 EndIf
 
-
-$CurBotPID = Run(StringFormat('AutoIt3.exe "%s" "%s"',$BotPath,$Character))
-WinWaitActive("[CLASS:AutoIt v3 GUI]")
-ControlSend("", "", "[CLASS:Edit; INSTANCE:1]", $Character)
-ControlClick("", "", "Start", "")
-
+Next
 
 #region Boring Shit
 

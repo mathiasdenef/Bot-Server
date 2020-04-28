@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Bot_Server_WinForms.Game_Launcher;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -23,7 +24,8 @@ namespace Bot_Server_WinForms
         public BindingList<Client> clientList = new BindingList<Client>();
         public List<Client> sourceClientList = new List<Client>();
         private BindingSource bindingSource1 = new BindingSource();
-      
+        public BindingList<ClientViewModel> clientViewModelBindingList;
+
         public Form1()
         {
             InitializeComponent();
@@ -168,6 +170,36 @@ namespace Bot_Server_WinForms
                 }
             }
         }
+
+        private void buttonRestartSelectedClients_Click(object sender, EventArgs e)
+        {
+            var checkedList = checkedListBox3.CheckedItems.Cast<string>().ToList();
+            ThreadStart ths = new ThreadStart(() =>
+            {
+
+                foreach (string clientCharacterName in checkedList)
+                {
+                    var client = sourceClientList.Where(x => x.characterName == clientCharacterName).FirstOrDefault();
+                    if (client.tcpClient != null)
+                    {
+                        client.SendMessage("Stop process");
+                    }
+                    do
+                    {
+                        Thread.Sleep(1000);
+                    } while (client.tcpClient != null);
+
+                    if (client.tcpClient == null)
+                    {
+
+                        StartClient(client);
+                        Thread.Sleep(3000);
+                    }
+                }
+            });
+            Thread th = new Thread(ths);
+            th.Start();
+        }
         private void buttonEndAllSelectedClients_Click(object sender, EventArgs e)
         {
             sourceClientList.Where(x => x.tcpClient == null).ToList().ForEach(client =>
@@ -228,11 +260,14 @@ namespace Bot_Server_WinForms
                     var password = splittedLine[1];
                     var characterName = splittedLine[2];
                     var gameClient = splittedLine[3];
-                    sourceClientList.Add(new Client(characterName, email, password, gameClient));
+                    if (!clientList.Where(x => x.characterName == characterName).Any())
+                    {
+                        sourceClientList.Add(new Client(characterName, email, password, gameClient, new ClientViewModel { Name = characterName }));
+                    }
                 }
                 file.Close();
             }
-
+            clientViewModelBindingList = new BindingList<ClientViewModel>(sourceClientList.Select(x => x.clientViewModel).ToList());
         }
         public string WaitForCharacterNameForClient(TcpClient tcpClient)
         {
@@ -255,25 +290,12 @@ namespace Bot_Server_WinForms
 
         public void StartClient(Client client)
         {
-            using (Process cProcess = new Process())
+
+            string args = "-fps 15 -noshaders -email " + client.email + " -password " + client.password + " -character \"" + client.characterName + "\"";
+            var started = Launcher.LaunchGame(client.gameClient, args);
+
+            if (started)
             {
-
-                //pProcess.StartInfo.FileName = @Settings.GetMultiLauncherFileLocation();
-                cProcess.StartInfo.FileName = @"C:\Program Files (x86)\AutoIt3\AutoIt3.exe";
-                cProcess.StartInfo.Arguments = "\"" + Settings.GetAutoLaunchFileLocation() + "\" \"" + Settings.GetMultiLauncherFileLocation() + "\" \"" + client.gameClient + "\" \"" + client.email + "\" \"" + client.password + "\" \"" + client.characterName + "\" \"" + this.checkBoxMinimizedClient.Checked + "\"";
-                //pProcess.StartInfo.UseShellExecute = true;
-                //pProcess.StartInfo.RedirectStandardOutput = true;
-                //pProcess.StartInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
-                //pProcess.StartInfo.CreateNoWindow = true; //not diplay a windows
-                //cProcess.StartInfo.Verb = "runas";
-                cProcess.Start();
-
-                do
-                {
-                    Thread.Sleep(1000);
-                }
-                while (!cProcess.HasExited);
-
 
                 using (Process sProcess = new Process())
                 {
@@ -281,7 +303,7 @@ namespace Bot_Server_WinForms
                     //pProcess.StartInfo.FileName = @Settings.GetMultiLauncherFileLocation();
                     sProcess.StartInfo.FileName = @"C:\Program Files (x86)\AutoIt3\AutoIt3.exe";
                     sProcess.StartInfo.Arguments = "\"" + Settings.GetScriptFileLocation() + "\" \"" + client.characterName + "\"";
-                    //pProcess.StartInfo.UseShellExecute = true;
+                    sProcess.StartInfo.UseShellExecute = true;
                     //pProcess.StartInfo.RedirectStandardOutput = true;
                     //pProcess.StartInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
                     //pProcess.StartInfo.CreateNoWindow = true; //not diplay a windows
@@ -299,12 +321,11 @@ namespace Bot_Server_WinForms
         private void Data_Load(object sender, System.EventArgs e)
         {
             // Populate the data source.
-            bindingSource1.Add(new Client() { characterName = "Bob", warSupplies = 10, succesRuns = 20, failRuns = 30 });
-            bindingSource1.Add(new Client() { characterName = "Snow", warSupplies = 20, succesRuns = 45, failRuns = 3045 });
-            bindingSource1.Add(new Client() { characterName = "Prop", warSupplies = 60, succesRuns = 686, failRuns = 455 });
-            bindingSource1.Add(new Client() { characterName = "Dana", warSupplies = 404, succesRuns = 489, failRuns = 879 });
-            bindingSource1.Add(new Client() { characterName = "WILLY", warSupplies = 778, succesRuns = 456, failRuns = 787 });
+            foreach (var client in sourceClientList)
+            {
+                bindingSource1.Add(client.clientViewModel);
 
+            }
             // Initialize the DataGridView.
             dataGridView1.AutoGenerateColumns = true;
             dataGridView1.AutoSize = true;
@@ -329,23 +350,6 @@ namespace Bot_Server_WinForms
 
 
         #endregion
-
-        private void buttonTestClick_Click(object sender, EventArgs e)
-        {
-            using (Process pProcess = new Process())
-            {
-
-                pProcess.StartInfo.FileName = @"C:\Program Files (x86)\AutoIt3\AutoIt3.exe";
-                //pProcess.StartInfo.Arguments = "\"" + Settings.GetAutoLaunchFileLocation() + "\" \"" + Settings.GetMultiLauncherFileLocation() + "\" \"" + client.gameClient + "\" \"" + client.email + "\" \"" + client.password + "\" \"" + client.characterName + "\" \"" + Settings.GetScriptFileLocation() + "\" \"" + this.checkBoxMinimizedClient.Checked + "\""; //argument
-                pProcess.StartInfo.UseShellExecute = true;
-                //pProcess.StartInfo.RedirectStandardOutput = true;
-                //pProcess.StartInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
-                //pProcess.StartInfo.CreateNoWindow = true; //not diplay a windows
-                pProcess.StartInfo.Verb = "runas";
-                pProcess.Start();
-
-            }
-        }
 
         //Class to handle each client request separatly
         //public class HandleClient
