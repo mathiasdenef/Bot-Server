@@ -62,6 +62,7 @@
             this.buttonStopSelectedClients = new System.Windows.Forms.Button();
             this.tabPage2 = new System.Windows.Forms.TabPage();
             this.dataGridView1 = new System.Windows.Forms.DataGridView();
+            this.buttonRestartSelectedClients = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.handleClientBindingSource)).BeginInit();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
@@ -345,6 +346,7 @@
             // 
             // groupBox5
             // 
+            this.groupBox5.Controls.Add(this.buttonRestartSelectedClients);
             this.groupBox5.Controls.Add(this.checkedListBox3);
             this.groupBox5.Controls.Add(this.buttonEndAllSelectedClients);
             this.groupBox5.Controls.Add(this.buttonStopSelectedClients);
@@ -405,6 +407,16 @@
             this.dataGridView1.ReadOnly = true;
             this.dataGridView1.Size = new System.Drawing.Size(1021, 574);
             this.dataGridView1.TabIndex = 0;
+            // 
+            // buttonRestartSelectedClients
+            // 
+            this.buttonRestartSelectedClients.Location = new System.Drawing.Point(7, 102);
+            this.buttonRestartSelectedClients.Name = "buttonRestartSelectedClients";
+            this.buttonRestartSelectedClients.Size = new System.Drawing.Size(192, 35);
+            this.buttonRestartSelectedClients.TabIndex = 3;
+            this.buttonRestartSelectedClients.Text = "Restart Selected Clients";
+            this.buttonRestartSelectedClients.UseVisualStyleBackColor = true;
+            this.buttonRestartSelectedClients.Click += new System.EventHandler(this.buttonRestartSelectedClients_Click);
             // 
             // Form1
             // 
@@ -471,12 +483,13 @@
 
 
         private System.Windows.Forms.CheckBox checkBoxMinimizedClient;
-        private System.Windows.Forms.DataGridView dataGridView1;
+        public System.Windows.Forms.DataGridView dataGridView1;
 
 
         private System.Windows.Forms.TabControl tabControl1;
         private System.Windows.Forms.TabPage tabPage1;
         private System.Windows.Forms.TabPage tabPage2;
+        private System.Windows.Forms.Button buttonRestartSelectedClients;
     }
 }
 

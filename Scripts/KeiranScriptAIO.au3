@@ -9,7 +9,10 @@
 #ce ----------------------------------------------------------------------------
 
 ; Script Start - Add your code below here
+Opt("WinTitleMatchMode", 3)
+Opt("TrayIconDebug",1)
 
+#RequireAdmin
 #include <GWA2.au3>
 #include <trade_partner.au3>
 #include <GuiEdit.au3>
@@ -21,48 +24,16 @@
 #include <WindowsConstants.au3>
 #include <MsgBoxConstants.au3>
 
-Opt("GUIOnEventMode", 1)
-#Region ### START Koda GUI section ### Form=
-$Form = GUICreate("Keiran Runner", 462, 597, -1, -1)
-$LogBox = GUICtrlCreateEdit("", 19, 449, 426, 142, BitOR($ES_AUTOVSCROLL,$ES_AUTOHSCROLL,$ES_READONLY,$ES_WANTRETURN))
-GUICtrlSetData(-1, "")
-$ButtonStart = GUICtrlCreateButton("Start", 49, 408, 378, 30)
-$LabelTotalTime = GUICtrlCreateLabel("00:00:00", 120, 224, 100, 17)
-$LabelLast = GUICtrlCreateLabel("00:00", 120, 288, 100, 17)
-$LabelAverage = GUICtrlCreateLabel("00:00", 120, 320, 100, 17)
-$LabelBest = GUICtrlCreateLabel("00:00", 120, 352, 100, 17)
-$LabelRunTime = GUICtrlCreateLabel("00:00:00", 120, 256, 100, 17)
-$CheckboxGraphics = GUICtrlCreateCheckbox("Disable Graphics", 40, 24, 97, 17)
-$CheckboxTest = GUICtrlCreateCheckbox("Test", 216, 24, 97, 17)
-$Group1 = GUICtrlCreateGroup("Times", 26, 184, 193, 209)
-$Label5 = GUICtrlCreateLabel("Total Time:", 40, 224, 70, 17)
-$Label6 = GUICtrlCreateLabel("Last:", 40, 288, 27, 17)
-$Label7 = GUICtrlCreateLabel("Average:", 40, 320, 47, 17)
-$Label8 = GUICtrlCreateLabel("Best:", 40, 352, 28, 17)
-$Label17 = GUICtrlCreateLabel("Run Time:", 40, 256, 53, 17)
-GUICtrlCreateGroup("", -99, -99, 1, 1)
-$Group2 = GUICtrlCreateGroup("Info", 258, 184, 193, 209)
-$Label1 = GUICtrlCreateLabel("Succes Runs:", 272, 224, 76, 17)
-$Label2 = GUICtrlCreateLabel("Fail Runs:", 272, 256, 51, 17)
-$Label3 = GUICtrlCreateLabel("War Supplies:", 272, 288, 70, 17)
-$Label4 = GUICtrlCreateLabel("Total Ecto's:", 272, 320, 63, 17)
-$LabelSuccesRuns = GUICtrlCreateLabel("-", 352, 224, 50, 17)
-$LabelFailRuns = GUICtrlCreateLabel("-", 352, 256, 50, 17)
-$LabelWarSupplies = GUICtrlCreateLabel("-", 352, 288, 50, 17)
-$LabelTotalEctos = GUICtrlCreateLabel("-", 352, 320, 50, 17)
-$Label9 = GUICtrlCreateLabel("Total Gold:", 272, 352, 63, 17)
-$LabeltotalGold = GUICtrlCreateLabel("-", 352, 352, 50, 17)
-GUICtrlCreateGroup("", -99, -99, 1, 1)
-$ButtonMaxMemory = GUICtrlCreateButton("Set Max Memory Usage", 25, 64, 194, 30)
-$CheckboxTrade = GUICtrlCreateCheckbox("Trade", 352, 24, 97, 17)
-$ButtonReduceMemory = GUICtrlCreateButton("Reduce Memory", 25, 128, 194, 30)
-$LogBoxTCP = GUICtrlCreateEdit("", 256, 56, 193, 118, BitOR($ES_AUTOVSCROLL,$ES_AUTOHSCROLL,$ES_READONLY,$ES_WANTRETURN))
-$CharacterName = $CmdLine[1]
-;$CharacterName = "Bob Danaerys"
-GUICtrlSetData(-1, "")
-GUISetState(@SW_SHOW)
-#EndRegion ### END Koda GUI section ###
-;~ Global $fLog = FileOpen("Keiran - Runner " & $CharName & ".log", 1) ;Log file
+Global $GWCA = False ; IF you are running a GWCA bot, will inject Graphics.dll in same folder as script.
+
+Global $GWMLPath = $CmdLine[1] ; Path to Guild Wars Multi Launch
+Global $GWPath = $CmdLine[2] ;Array of Paths to your Gw.exe's
+Global $Email = $CmdLine[3]
+Global $Password = $CmdLine[4]
+Global $Character = $CmdLine[5]
+Global $MinimizeClient = $CmdLine[6]
+
+Global $CurPID,$CurBotPID,$Path,$CurHwnd
 Global $boolrun = False
 Global $gwpid = -1
 
@@ -106,31 +77,135 @@ Global $serverSocket = Null
 Global $goTrade
 Global $tradeAgent
 
+Opt("GUIOnEventMode", 1)
+#Region ### START Koda GUI section ### Form=
+$Form = GUICreate("Keiran Runner", 462, 597, -1, -1)
+$LogBox = GUICtrlCreateEdit("", 19, 449, 426, 142, BitOR($ES_AUTOVSCROLL,$ES_AUTOHSCROLL,$ES_READONLY,$ES_WANTRETURN))
+GUICtrlSetData(-1, "")
+$ButtonStart = GUICtrlCreateButton("Start", 49, 408, 378, 30)
+$LabelTotalTime = GUICtrlCreateLabel("00:00:00", 120, 224, 100, 17)
+$LabelLast = GUICtrlCreateLabel("00:00", 120, 288, 100, 17)
+$LabelAverage = GUICtrlCreateLabel("00:00", 120, 320, 100, 17)
+$LabelBest = GUICtrlCreateLabel("00:00", 120, 352, 100, 17)
+$LabelRunTime = GUICtrlCreateLabel("00:00:00", 120, 256, 100, 17)
+$CheckboxGraphics = GUICtrlCreateCheckbox("Disable Graphics", 40, 24, 97, 17)
+$CheckboxTest = GUICtrlCreateCheckbox("Test", 216, 24, 97, 17)
+$Group1 = GUICtrlCreateGroup("Times", 26, 184, 193, 209)
+$Label5 = GUICtrlCreateLabel("Total Time:", 40, 224, 70, 17)
+$Label6 = GUICtrlCreateLabel("Last:", 40, 288, 27, 17)
+$Label7 = GUICtrlCreateLabel("Average:", 40, 320, 47, 17)
+$Label8 = GUICtrlCreateLabel("Best:", 40, 352, 28, 17)
+$Label17 = GUICtrlCreateLabel("Run Time:", 40, 256, 53, 17)
+GUICtrlCreateGroup("", -99, -99, 1, 1)
+$Group2 = GUICtrlCreateGroup("Info", 258, 184, 193, 209)
+$Label1 = GUICtrlCreateLabel("Succes Runs:", 272, 224, 76, 17)
+$Label2 = GUICtrlCreateLabel("Fail Runs:", 272, 256, 51, 17)
+$Label3 = GUICtrlCreateLabel("War Supplies:", 272, 288, 70, 17)
+$Label4 = GUICtrlCreateLabel("Total Ecto's:", 272, 320, 63, 17)
+$LabelSuccesRuns = GUICtrlCreateLabel("-", 352, 224, 50, 17)
+$LabelFailRuns = GUICtrlCreateLabel("-", 352, 256, 50, 17)
+$LabelWarSupplies = GUICtrlCreateLabel("-", 352, 288, 50, 17)
+$LabelTotalEctos = GUICtrlCreateLabel("-", 352, 320, 50, 17)
+$Label9 = GUICtrlCreateLabel("Total Gold:", 272, 352, 63, 17)
+$LabeltotalGold = GUICtrlCreateLabel("-", 352, 352, 50, 17)
+GUICtrlCreateGroup("", -99, -99, 1, 1)
+$ButtonMaxMemory = GUICtrlCreateButton("Set Max Memory Usage", 25, 64, 194, 30)
+$CheckboxTrade = GUICtrlCreateCheckbox("Trade", 352, 24, 97, 17)
+$ButtonReduceMemory = GUICtrlCreateButton("Reduce Memory", 25, 128, 194, 30)
+$LogBoxTCP = GUICtrlCreateEdit("", 256, 56, 193, 118, BitOR($ES_AUTOVSCROLL,$ES_AUTOHSCROLL,$ES_READONLY,$ES_WANTRETURN))
+GUICtrlSetData(-1, "")
+GUISetState(@SW_SHOW)
+#EndRegion ### END Koda GUI section ###
+
+#Region Declarations
+Local $mKernelHandle
+Local $mGWProcHandle
+Local $mGWHwnd
+Local $mMemory
+Local $mLabels[1][2]
+Local $mBase = 0x00DE0000
+Local $mASMString, $mASMSize, $mASMCodeOffset
+
+
+Local $mQueueCounter, $mQueueSize, $mQueueBase
+Local $mTargetLogBase
+Local $mStringLogBase
+Local $mSkillBase
+Local $mEnsureEnglish
+Local $mMyID, $mCurrentTarget
+Local $mAgentBase
+Local $mBasePointer
+Local $mRegion, $mLanguage
+Local $mPing
+Local $mCharname
+Local $mMapID
+Local $mMaxAgents
+Local $mMapLoading
+Local $mMapIsLoaded
+Local $mLoggedIn
+Local $mStringHandlerPtr
+Local $mWriteChatSender
+Local $mTraderQuoteID, $mTraderCostID, $mTraderCostValue
+Local $mSkillTimer
+Local $mBuildNumber
+Local $mZoomStill, $mZoomMoving
+Local $mDisableRendering
+Local $mAgentCopyCount
+Local $mAgentCopyBase
+
+Local $mUseStringLog
+Local $mUseEventSystem
+#EndRegion Declarations
+
+#Region CommandStructs
+Local $mLogin = DllStructCreate('ptr;dword;dword;dword;dword;dword;dword;dword;dword;dword;dword;dword;dword')
+Local $mLoginPtr = DllStructGetPtr($mLogin)
+#EndRegion CommandStructs
+
+$Path = StringFormat('"%s" "%s" -windowed -email %s -password %s -character "%s"',$GWMLPath,$GWPath,$Email,$Password,$Character)
+Run($Path)
+$hWnd = WinWaitActive("[CLASS:ArenaNet_Dx_Window_Class]")
+Sleep(2000)
+$CurPID = WinGetProcess("Guild Wars")
+
+$CurHwnd = InitMemory($CurPID)
+
+Do
+	Sleep(100)
+Until ScanForCharname() <> ""
+
+Do
+	Sleep(100)
+	ControlSend($CurHwnd,"","","N")
+	ControlSend($CurHwnd,"","","{ENTER}")
+Until GetAgentExists(-2)
+
+MemoryClose()
+
+Sleep(100)
+
+If $GWCA Then _InjectDll($CurPID,"Graphics.dll")
+
+If $MinimizeClient = "True" Then 
+	WinSetState($hWnd, "", @SW_MINIMIZE)
+EndIf
+
+
+;~ $CurBotPID = Run(StringFormat('AutoIt3.exe "%s" "%s"',$BotPath,$Character))
+;~ WinWaitActive("[CLASS:AutoIt v3 GUI]")
+;~ ControlSend("", "", "[CLASS:Edit; INSTANCE:1]", $Character)
+
+
 
 GUICtrlSetOnEvent($ButtonStart, "EventHandler")
 GUICtrlSetOnEvent($CheckboxGraphics, "EventHandler")
 GUICtrlSetOnEvent($CheckboxTrade, "EventHandler")
 GUISetOnEvent($gui_event_close, "EventHandler")
 
-
-
-
-$CurPID = WinGetProcess("Guild Wars")
-$CurHwnd = InitMemory($CurPID)
-Do
-	Sleep(100)
-Until ScanForCharname() <> ""
-Sleep(1000)
-ControlSend($CurHwnd,"","","N")
-ControlSend($CurHwnd,"","","{ENTER}")
-Sleep(1000)
-Do
-	Sleep(100)
-Until GetAgentExists(-2)
-MemoryClose()
-
 Sleep(1000)
 ControlClick("", "", "Start", "")
+
+;~ Global $fLog = FileOpen("Keiran - Runner " & $CharName & ".log", 1) ;Log file
 
 While 1
 	If $boolrun Then
@@ -150,20 +225,20 @@ Func EventHandler()
 		Case $ButtonStart
 			GUICtrlSetData($ButtonStart, "Initializing...")
 			GUICtrlSetState($ButtonStart, $gui_disable)
-			If initialize($CharacterName, True, True, True) = False Then
+			If initialize($Character, True, True, True) = False Then
 				MsgBox(0, "Error", "Can't find a Guild Wars client with that character name.")
 				Exit
 			EndIf
 			$boolrun = True
-			$gwpid = ProcessExists("gw.exe")		
-			WinSetTitle($Form, "", "Keiran - " & $CharacterName)
+			$gwpid = ProcessExists("gw.exe")
+			WinSetTitle($Form, "", "Keiran - " & $Character)
 			GUICtrlSetData($ButtonStart, "Bot Started")
 			AdlibRegister("TimerUpdater", 1000)
 			FindWarSupplies()
 			setmaxmemory()
 			SetPlayerStatus(0)
 			AdlibRegister("ListenToServer")
-			;~ AdlibRegister("SendStatsToServer",60000)
+			;AdlibRegister("SendStatsToServer",60000)
 		Case $ButtonMaxMemory
 			setmaxmemory()
 		Case $CheckboxGraphics
@@ -281,7 +356,7 @@ Func StartTcp()
 	Else
 		Out("Connected to server")
 		Sleep(1000)
-		TCPSend($serverSocket, $characterName)
+		TCPSend($serverSocket, $Character)
 		Out("Sent to server")
 	EndIf
 EndFunc   ;==>StartTcp
@@ -398,7 +473,6 @@ EndFunc
 Func EnterQuest()
 	$HomTimeQuest = TimerInit()
 	out("Entering Quest")
-	Sleep(5000)
 	Do
 		$npc = getnearestnpctocoords(-6753, 6513)
 		gotonpc($npc)
@@ -406,8 +480,8 @@ Func EnterQuest()
 		changeweaponset(4)
 		rndsleep(1000)
 		dialog(1586)
-	Until waitmaploading($questMapId) Or TimerDiff($HomTimeQuest) > 60000
-	If TimerDiff($HomTimeQuest) > 60000 Then
+	Until waitmaploading($questMapId) Or TimerDiff($HomTimeQuest) > 25000
+	If TimerDiff($HomTimeQuest) > 25000 Then
 		out("Stuck in HoM")
 		travelto($eotnOutpostMapId)
 		waitmaploading($eotnOutpostMapId)
@@ -975,6 +1049,45 @@ Func _reducememory()
 	EndIf
 	Return $ai_return[0]
 EndFunc
+
+#Region Boring Shit
+
+Func _InjectDll($ProcessId, $DllPath)
+	If $ProcessId == 0 Then Return SetError(1, "", False)
+	If Not (FileExists($DllPath)) Then Return SetError(2, "", False)
+	If Not (StringRight($DllPath, 4) == ".dll") Then Return SetError(3, "", False)
+
+	$Kernel32 = DllOpen("kernel32.dll")
+	If @error Then Return SetError(4, "", False)
+
+	$DLL_Path = DllStructCreate("char[255]")
+	DllCall($Kernel32, "DWORD", "GetFullPathNameA", "str", $DllPath, "DWORD", 255, "ptr", DllStructGetPtr($DLL_Path), "int", 0)
+	If @error Then Return SetError(5, "", False)
+
+	$hProcess = DllCall($Kernel32, "DWORD", "OpenProcess", "DWORD", 0x1F0FFF, "int", 0, "DWORD", $ProcessId)
+	If @error Then Return SetError(6, "", False)
+
+	$hModule = DllCall($Kernel32, "DWORD", "GetModuleHandleA", "str", "kernel32.dll")
+	If @error Then Return SetError(7, "", False)
+
+	$lpStartAddress = DllCall($Kernel32, "DWORD", "GetProcAddress", "DWORD", $hModule[0], "str", "LoadLibraryA")
+	If @error Then Return SetError(8, "", False)
+
+	$lpParameter = DllCall($Kernel32, "DWORD", "VirtualAllocEx", "int", $hProcess[0], "int", 0, "ULONG_PTR", DllStructGetSize($DLL_Path), "DWORD", 0x3000, "int", 4)
+	If @error Then Return SetError(9, "", False)
+
+	DllCall("kernel32.dll", "BOOL", "WriteProcessMemory", "int", $hProcess[0], "DWORD", $lpParameter[0], "str", DllStructGetData($DLL_Path, 1), "ULONG_PTR", DllStructGetSize($DLL_Path), "int", 0)
+	If @error Then Return SetError(10, "", False)
+
+	$hThread = DllCall($Kernel32, "int", "CreateRemoteThread", "DWORD", $hProcess[0], "int", 0, "int", 0, "DWORD", $lpStartAddress[0], "DWORD", $lpParameter[0], "int", 0, "int", 0)
+	If @error Then Return SetError(11, "", False)
+
+	DllCall($Kernel32, "BOOL", "CloseHandle", "DWORD", $hProcess[0])
+	DllClose($Kernel32)
+
+	Return SetError(0, "", True)
+EndFunc
+#EndRegion
 
 #Region Memory
 

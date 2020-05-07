@@ -17,21 +17,20 @@ namespace Bot_Server_WinForms
         public string email { get; set; }
         public string password { get; set; }
         public string gameClient { get; set; }
-        public int warSupplies { get; set; }
-        public int succesRuns { get; set; }
-        public int failRuns { get; set; }
+        public ClientViewModel clientViewModel { get; set; }
 
         public Client(TcpClient tcpClient, string clNo)
         {
             this.tcpClient = tcpClient;
             this.clientId = clNo;
         }
-        public Client(string characterName, string email, string password, string gameClient)
+        public Client(string characterName, string email, string password, string gameClient, ClientViewModel clientViewModel)
         {
             this.characterName = characterName;
             this.email = email;
             this.password = password;
             this.gameClient = gameClient;
+            this.clientViewModel = clientViewModel;
         }
 
         public Client()
@@ -40,10 +39,12 @@ namespace Bot_Server_WinForms
         {
              Form1.form.Invoke(new MethodInvoker(delegate ()
             {
+                this.clientViewModel.Running = "Yes";
                 Form1.form.clientList.Add(this);
                 Form1.form.checkedListBox1.Items.Remove(this.characterName);
                 Form1.form.checkedListBox2.Items.Add(this.characterName);
                 Form1.form.checkedListBox3.Items.Add(this.characterName);
+                Form1.form.dataGridView1.Refresh();
             }));
             Thread ctThread = new Thread(StartListening);
             ctThread.Start();
@@ -54,10 +55,12 @@ namespace Bot_Server_WinForms
             this.tcpClient = null;
             Form1.form.Invoke(new MethodInvoker(delegate ()
             {
+                this.clientViewModel.Running = "No";
                 Form1.form.clientList.Remove(this);
                 Form1.form.checkedListBox1.Items.Add(this.characterName);
                 Form1.form.checkedListBox2.Items.Remove(this.characterName);
                 Form1.form.checkedListBox3.Items.Remove(this.characterName);
+                Form1.form.dataGridView1.Refresh();
             }));
      
             Disconnect();
@@ -91,13 +94,19 @@ namespace Bot_Server_WinForms
                     switch (messageType)
                     {
                         case "Stats":
-                            var warSuppliesString = dataFromClientSplitted.Contains("War Supplies").ToString();
-                            this.warSupplies = Convert.ToInt32(warSuppliesString.Substring(warSuppliesString.LastIndexOf('=') + 1));
-                            var successRunsString = dataFromClientSplitted.Contains("Success Runs").ToString();
-                            this.succesRuns = Convert.ToInt32(successRunsString.Substring(successRunsString.LastIndexOf('=') + 1));
-                            var failRunsString = dataFromClientSplitted.Contains("Fail Runs").ToString();
-                            this.failRuns = Convert.ToInt32(failRunsString.Substring(failRunsString.LastIndexOf('=') + 1)); 
+                            var warSuppliesString = dataFromClientSplitted.Where(x => x.Contains("War Supplies")).FirstOrDefault();
+                            this.clientViewModel.WarSupplies = Convert.ToInt32(warSuppliesString.Substring(warSuppliesString.LastIndexOf('=') + 1));
+                            var successRunsString = dataFromClientSplitted.Where(x => x.Contains("Success Runs")).FirstOrDefault();
+                            this.clientViewModel.SuccesRuns = Convert.ToInt32(successRunsString.Substring(successRunsString.LastIndexOf('=') + 1));
+                            var failRunsString = dataFromClientSplitted.Where(x => x.Contains("Fail Runs")).FirstOrDefault();
+                            this.clientViewModel.FailRuns = Convert.ToInt32(failRunsString.Substring(failRunsString.LastIndexOf('=') + 1));
+                            Form1.form.Invoke(new MethodInvoker(delegate ()
+                            {
+
+                                Form1.form.dataGridView1.Refresh();
+                            }));
                             break;
+
                     }
                     
 
