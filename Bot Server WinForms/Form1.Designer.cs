@@ -29,7 +29,6 @@
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
-            this.buttonStartServer = new System.Windows.Forms.Button();
             this.listBoxClients = new System.Windows.Forms.ListBox();
             this.buttonTradeAllClients = new System.Windows.Forms.Button();
             this.buttonStopTradingAllClients = new System.Windows.Forms.Button();
@@ -57,12 +56,16 @@
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.tabPage1 = new System.Windows.Forms.TabPage();
             this.groupBox5 = new System.Windows.Forms.GroupBox();
+            this.buttonRestartSelectedClients = new System.Windows.Forms.Button();
             this.checkedListBox3 = new System.Windows.Forms.CheckedListBox();
             this.buttonEndAllSelectedClients = new System.Windows.Forms.Button();
             this.buttonStopSelectedClients = new System.Windows.Forms.Button();
             this.tabPage2 = new System.Windows.Forms.TabPage();
             this.dataGridView1 = new System.Windows.Forms.DataGridView();
-            this.buttonRestartSelectedClients = new System.Windows.Forms.Button();
+            this.groupBox6 = new System.Windows.Forms.GroupBox();
+            this.checkedListBox4 = new System.Windows.Forms.CheckedListBox();
+            this.button2 = new System.Windows.Forms.Button();
+            this.button3 = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.handleClientBindingSource)).BeginInit();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
@@ -73,31 +76,22 @@
             this.groupBox5.SuspendLayout();
             this.tabPage2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
+            this.groupBox6.SuspendLayout();
             this.SuspendLayout();
-            // 
-            // buttonStartServer
-            // 
-            this.buttonStartServer.Location = new System.Drawing.Point(6, 19);
-            this.buttonStartServer.Name = "buttonStartServer";
-            this.buttonStartServer.Size = new System.Drawing.Size(194, 36);
-            this.buttonStartServer.TabIndex = 0;
-            this.buttonStartServer.Text = "Start Server";
-            this.buttonStartServer.UseVisualStyleBackColor = true;
-            this.buttonStartServer.Click += new System.EventHandler(this.buttonStartServer_Click);
             // 
             // listBoxClients
             // 
             this.listBoxClients.FormattingEnabled = true;
-            this.listBoxClients.Location = new System.Drawing.Point(6, 324);
+            this.listBoxClients.Location = new System.Drawing.Point(6, 230);
             this.listBoxClients.Name = "listBoxClients";
-            this.listBoxClients.Size = new System.Drawing.Size(194, 173);
+            this.listBoxClients.Size = new System.Drawing.Size(188, 264);
             this.listBoxClients.TabIndex = 1;
             // 
             // buttonTradeAllClients
             // 
-            this.buttonTradeAllClients.Location = new System.Drawing.Point(6, 19);
+            this.buttonTradeAllClients.Location = new System.Drawing.Point(6, 13);
             this.buttonTradeAllClients.Name = "buttonTradeAllClients";
-            this.buttonTradeAllClients.Size = new System.Drawing.Size(195, 36);
+            this.buttonTradeAllClients.Size = new System.Drawing.Size(188, 36);
             this.buttonTradeAllClients.TabIndex = 2;
             this.buttonTradeAllClients.Text = "Trade All Clients";
             this.buttonTradeAllClients.UseVisualStyleBackColor = true;
@@ -105,9 +99,9 @@
             // 
             // buttonStopTradingAllClients
             // 
-            this.buttonStopTradingAllClients.Location = new System.Drawing.Point(6, 101);
+            this.buttonStopTradingAllClients.Location = new System.Drawing.Point(6, 93);
             this.buttonStopTradingAllClients.Name = "buttonStopTradingAllClients";
-            this.buttonStopTradingAllClients.Size = new System.Drawing.Size(195, 36);
+            this.buttonStopTradingAllClients.Size = new System.Drawing.Size(188, 36);
             this.buttonStopTradingAllClients.TabIndex = 3;
             this.buttonStopTradingAllClients.Text = "Stop Trade All Clients";
             this.buttonStopTradingAllClients.UseVisualStyleBackColor = true;
@@ -115,19 +109,19 @@
             // 
             // textBoxLog
             // 
-            this.textBoxLog.Location = new System.Drawing.Point(6, 101);
+            this.textBoxLog.Location = new System.Drawing.Point(6, 54);
             this.textBoxLog.Multiline = true;
             this.textBoxLog.Name = "textBoxLog";
             this.textBoxLog.ReadOnly = true;
             this.textBoxLog.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.textBoxLog.Size = new System.Drawing.Size(194, 217);
+            this.textBoxLog.Size = new System.Drawing.Size(188, 170);
             this.textBoxLog.TabIndex = 4;
             // 
             // buttonRefreshClient
             // 
-            this.buttonRefreshClient.Location = new System.Drawing.Point(6, 59);
+            this.buttonRefreshClient.Location = new System.Drawing.Point(6, 13);
             this.buttonRefreshClient.Name = "buttonRefreshClient";
-            this.buttonRefreshClient.Size = new System.Drawing.Size(194, 36);
+            this.buttonRefreshClient.Size = new System.Drawing.Size(188, 36);
             this.buttonRefreshClient.TabIndex = 5;
             this.buttonRefreshClient.Text = "Refresh Clients";
             this.buttonRefreshClient.UseVisualStyleBackColor = true;
@@ -135,16 +129,16 @@
             // checkedListBox1
             // 
             this.checkedListBox1.FormattingEnabled = true;
-            this.checkedListBox1.Location = new System.Drawing.Point(5, 149);
+            this.checkedListBox1.Location = new System.Drawing.Point(5, 145);
             this.checkedListBox1.Name = "checkedListBox1";
-            this.checkedListBox1.Size = new System.Drawing.Size(194, 169);
+            this.checkedListBox1.Size = new System.Drawing.Size(189, 349);
             this.checkedListBox1.TabIndex = 6;
             // 
             // buttonStartAllClients
             // 
-            this.buttonStartAllClients.Location = new System.Drawing.Point(5, 61);
+            this.buttonStartAllClients.Location = new System.Drawing.Point(5, 52);
             this.buttonStartAllClients.Name = "buttonStartAllClients";
-            this.buttonStartAllClients.Size = new System.Drawing.Size(195, 36);
+            this.buttonStartAllClients.Size = new System.Drawing.Size(189, 36);
             this.buttonStartAllClients.TabIndex = 7;
             this.buttonStartAllClients.Text = "Start All Clients";
             this.buttonStartAllClients.UseVisualStyleBackColor = true;
@@ -152,9 +146,9 @@
             // 
             // buttonStartSelectedClients
             // 
-            this.buttonStartSelectedClients.Location = new System.Drawing.Point(6, 19);
+            this.buttonStartSelectedClients.Location = new System.Drawing.Point(5, 13);
             this.buttonStartSelectedClients.Name = "buttonStartSelectedClients";
-            this.buttonStartSelectedClients.Size = new System.Drawing.Size(195, 36);
+            this.buttonStartSelectedClients.Size = new System.Drawing.Size(189, 36);
             this.buttonStartSelectedClients.TabIndex = 8;
             this.buttonStartSelectedClients.Text = "Start Selected Clients";
             this.buttonStartSelectedClients.UseVisualStyleBackColor = true;
@@ -175,7 +169,7 @@
             this.textBoxSelectedSourceAccounts.Enabled = false;
             this.textBoxSelectedSourceAccounts.Location = new System.Drawing.Point(118, 29);
             this.textBoxSelectedSourceAccounts.Name = "textBoxSelectedSourceAccounts";
-            this.textBoxSelectedSourceAccounts.Size = new System.Drawing.Size(215, 20);
+            this.textBoxSelectedSourceAccounts.Size = new System.Drawing.Size(214, 20);
             this.textBoxSelectedSourceAccounts.TabIndex = 10;
             // 
             // textBoxSelectedScript
@@ -183,7 +177,7 @@
             this.textBoxSelectedScript.Enabled = false;
             this.textBoxSelectedScript.Location = new System.Drawing.Point(118, 55);
             this.textBoxSelectedScript.Name = "textBoxSelectedScript";
-            this.textBoxSelectedScript.Size = new System.Drawing.Size(215, 20);
+            this.textBoxSelectedScript.Size = new System.Drawing.Size(214, 20);
             this.textBoxSelectedScript.TabIndex = 11;
             // 
             // buttonSelectScript
@@ -220,19 +214,19 @@
             this.groupBox1.Controls.Add(this.buttonStartSelectedClients);
             this.groupBox1.Controls.Add(this.buttonStartAllClients);
             this.groupBox1.Controls.Add(this.checkedListBox1);
-            this.groupBox1.Location = new System.Drawing.Point(479, 6);
+            this.groupBox1.Location = new System.Drawing.Point(420, 9);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(210, 329);
+            this.groupBox1.Size = new System.Drawing.Size(200, 500);
             this.groupBox1.TabIndex = 15;
             this.groupBox1.TabStop = false;
-            this.groupBox1.Text = "Start - Bots";
+            this.groupBox1.Text = "Start";
             // 
             // checkBoxMinimizedClient
             // 
             this.checkBoxMinimizedClient.AutoSize = true;
             this.checkBoxMinimizedClient.Checked = true;
             this.checkBoxMinimizedClient.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.checkBoxMinimizedClient.Location = new System.Drawing.Point(18, 112);
+            this.checkBoxMinimizedClient.Location = new System.Drawing.Point(6, 104);
             this.checkBoxMinimizedClient.Name = "checkBoxMinimizedClient";
             this.checkBoxMinimizedClient.Size = new System.Drawing.Size(124, 17);
             this.checkBoxMinimizedClient.TabIndex = 9;
@@ -249,7 +243,7 @@
             this.groupBox2.Controls.Add(this.textBoxSelectedSourceAccounts);
             this.groupBox2.Controls.Add(this.buttonSelectMultiLauncher);
             this.groupBox2.Controls.Add(this.buttonSelectScript);
-            this.groupBox2.Location = new System.Drawing.Point(254, 357);
+            this.groupBox2.Location = new System.Drawing.Point(1038, 9);
             this.groupBox2.Name = "groupBox2";
             this.groupBox2.Size = new System.Drawing.Size(340, 146);
             this.groupBox2.TabIndex = 16;
@@ -276,16 +270,16 @@
             // 
             // groupBox3
             // 
-            this.groupBox3.Controls.Add(this.buttonStartServer);
             this.groupBox3.Controls.Add(this.buttonRefreshClient);
             this.groupBox3.Controls.Add(this.textBoxLog);
             this.groupBox3.Controls.Add(this.listBoxClients);
-            this.groupBox3.Location = new System.Drawing.Point(24, 6);
+            this.groupBox3.Location = new System.Drawing.Point(8, 9);
             this.groupBox3.Name = "groupBox3";
-            this.groupBox3.Size = new System.Drawing.Size(224, 513);
+            this.groupBox3.Size = new System.Drawing.Size(200, 500);
             this.groupBox3.TabIndex = 17;
             this.groupBox3.TabStop = false;
             this.groupBox3.Text = "Bot Logs";
+            this.groupBox3.Enter += new System.EventHandler(this.groupBox3_Enter);
             // 
             // groupBox4
             // 
@@ -293,18 +287,19 @@
             this.groupBox4.Controls.Add(this.checkedListBox2);
             this.groupBox4.Controls.Add(this.buttonTradeAllClients);
             this.groupBox4.Controls.Add(this.buttonStopTradingAllClients);
-            this.groupBox4.Location = new System.Drawing.Point(254, 6);
+            this.groupBox4.Location = new System.Drawing.Point(214, 9);
             this.groupBox4.Name = "groupBox4";
-            this.groupBox4.Size = new System.Drawing.Size(219, 329);
+            this.groupBox4.Size = new System.Drawing.Size(200, 500);
             this.groupBox4.TabIndex = 18;
             this.groupBox4.TabStop = false;
-            this.groupBox4.Text = "Bot - Trading Commands";
+            this.groupBox4.Text = "Trade";
+            this.groupBox4.Enter += new System.EventHandler(this.groupBox4_Enter);
             // 
             // buttonTradeSelectedClients
             // 
-            this.buttonTradeSelectedClients.Location = new System.Drawing.Point(7, 62);
+            this.buttonTradeSelectedClients.Location = new System.Drawing.Point(6, 54);
             this.buttonTradeSelectedClients.Name = "buttonTradeSelectedClients";
-            this.buttonTradeSelectedClients.Size = new System.Drawing.Size(194, 33);
+            this.buttonTradeSelectedClients.Size = new System.Drawing.Size(188, 33);
             this.buttonTradeSelectedClients.TabIndex = 5;
             this.buttonTradeSelectedClients.Text = "Trade Selected Clients";
             this.buttonTradeSelectedClients.UseVisualStyleBackColor = true;
@@ -313,9 +308,9 @@
             // checkedListBox2
             // 
             this.checkedListBox2.FormattingEnabled = true;
-            this.checkedListBox2.Location = new System.Drawing.Point(6, 149);
+            this.checkedListBox2.Location = new System.Drawing.Point(6, 145);
             this.checkedListBox2.Name = "checkedListBox2";
-            this.checkedListBox2.Size = new System.Drawing.Size(195, 169);
+            this.checkedListBox2.Size = new System.Drawing.Size(188, 349);
             this.checkedListBox2.TabIndex = 4;
             // 
             // tabControl1
@@ -326,11 +321,12 @@
             this.tabControl1.Location = new System.Drawing.Point(0, 0);
             this.tabControl1.Name = "tabControl1";
             this.tabControl1.SelectedIndex = 0;
-            this.tabControl1.Size = new System.Drawing.Size(1035, 606);
+            this.tabControl1.Size = new System.Drawing.Size(1393, 541);
             this.tabControl1.TabIndex = 19;
             // 
             // tabPage1
             // 
+            this.tabPage1.Controls.Add(this.groupBox6);
             this.tabPage1.Controls.Add(this.groupBox5);
             this.tabPage1.Controls.Add(this.groupBox3);
             this.tabPage1.Controls.Add(this.groupBox4);
@@ -339,10 +335,11 @@
             this.tabPage1.Location = new System.Drawing.Point(4, 22);
             this.tabPage1.Name = "tabPage1";
             this.tabPage1.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPage1.Size = new System.Drawing.Size(1027, 580);
+            this.tabPage1.Size = new System.Drawing.Size(1385, 515);
             this.tabPage1.TabIndex = 0;
             this.tabPage1.Text = "Bot commands";
             this.tabPage1.UseVisualStyleBackColor = true;
+            this.tabPage1.Click += new System.EventHandler(this.tabPage1_Click);
             // 
             // groupBox5
             // 
@@ -350,26 +347,36 @@
             this.groupBox5.Controls.Add(this.checkedListBox3);
             this.groupBox5.Controls.Add(this.buttonEndAllSelectedClients);
             this.groupBox5.Controls.Add(this.buttonStopSelectedClients);
-            this.groupBox5.Location = new System.Drawing.Point(695, 6);
+            this.groupBox5.Location = new System.Drawing.Point(626, 9);
             this.groupBox5.Name = "groupBox5";
-            this.groupBox5.Size = new System.Drawing.Size(211, 329);
+            this.groupBox5.Size = new System.Drawing.Size(200, 500);
             this.groupBox5.TabIndex = 19;
             this.groupBox5.TabStop = false;
-            this.groupBox5.Text = "Stop - Bots";
+            this.groupBox5.Text = "Stop";
+            // 
+            // buttonRestartSelectedClients
+            // 
+            this.buttonRestartSelectedClients.Location = new System.Drawing.Point(7, 96);
+            this.buttonRestartSelectedClients.Name = "buttonRestartSelectedClients";
+            this.buttonRestartSelectedClients.Size = new System.Drawing.Size(187, 35);
+            this.buttonRestartSelectedClients.TabIndex = 3;
+            this.buttonRestartSelectedClients.Text = "Restart Selected Clients";
+            this.buttonRestartSelectedClients.UseVisualStyleBackColor = true;
+            this.buttonRestartSelectedClients.Click += new System.EventHandler(this.buttonRestartSelectedClients_Click);
             // 
             // checkedListBox3
             // 
             this.checkedListBox3.FormattingEnabled = true;
-            this.checkedListBox3.Location = new System.Drawing.Point(6, 149);
+            this.checkedListBox3.Location = new System.Drawing.Point(6, 145);
             this.checkedListBox3.Name = "checkedListBox3";
-            this.checkedListBox3.Size = new System.Drawing.Size(199, 169);
+            this.checkedListBox3.Size = new System.Drawing.Size(188, 349);
             this.checkedListBox3.TabIndex = 2;
             // 
             // buttonEndAllSelectedClients
             // 
-            this.buttonEndAllSelectedClients.Location = new System.Drawing.Point(6, 60);
+            this.buttonEndAllSelectedClients.Location = new System.Drawing.Point(6, 54);
             this.buttonEndAllSelectedClients.Name = "buttonEndAllSelectedClients";
-            this.buttonEndAllSelectedClients.Size = new System.Drawing.Size(193, 36);
+            this.buttonEndAllSelectedClients.Size = new System.Drawing.Size(188, 36);
             this.buttonEndAllSelectedClients.TabIndex = 1;
             this.buttonEndAllSelectedClients.Text = "End All Clients";
             this.buttonEndAllSelectedClients.UseVisualStyleBackColor = true;
@@ -377,9 +384,9 @@
             // 
             // buttonStopSelectedClients
             // 
-            this.buttonStopSelectedClients.Location = new System.Drawing.Point(6, 19);
+            this.buttonStopSelectedClients.Location = new System.Drawing.Point(6, 13);
             this.buttonStopSelectedClients.Name = "buttonStopSelectedClients";
-            this.buttonStopSelectedClients.Size = new System.Drawing.Size(193, 36);
+            this.buttonStopSelectedClients.Size = new System.Drawing.Size(188, 36);
             this.buttonStopSelectedClients.TabIndex = 0;
             this.buttonStopSelectedClients.Text = "Stop Selected Clients";
             this.buttonStopSelectedClients.UseVisualStyleBackColor = true;
@@ -408,21 +415,49 @@
             this.dataGridView1.Size = new System.Drawing.Size(1021, 574);
             this.dataGridView1.TabIndex = 0;
             // 
-            // buttonRestartSelectedClients
+            // groupBox6
             // 
-            this.buttonRestartSelectedClients.Location = new System.Drawing.Point(7, 102);
-            this.buttonRestartSelectedClients.Name = "buttonRestartSelectedClients";
-            this.buttonRestartSelectedClients.Size = new System.Drawing.Size(192, 35);
-            this.buttonRestartSelectedClients.TabIndex = 3;
-            this.buttonRestartSelectedClients.Text = "Restart Selected Clients";
-            this.buttonRestartSelectedClients.UseVisualStyleBackColor = true;
-            this.buttonRestartSelectedClients.Click += new System.EventHandler(this.buttonRestartSelectedClients_Click);
+            this.groupBox6.Controls.Add(this.checkedListBox4);
+            this.groupBox6.Controls.Add(this.button2);
+            this.groupBox6.Controls.Add(this.button3);
+            this.groupBox6.Location = new System.Drawing.Point(832, 9);
+            this.groupBox6.Name = "groupBox6";
+            this.groupBox6.Size = new System.Drawing.Size(200, 500);
+            this.groupBox6.TabIndex = 20;
+            this.groupBox6.TabStop = false;
+            this.groupBox6.Text = "Reset";
+            // 
+            // checkedListBox4
+            // 
+            this.checkedListBox4.FormattingEnabled = true;
+            this.checkedListBox4.Location = new System.Drawing.Point(7, 145);
+            this.checkedListBox4.Name = "checkedListBox4";
+            this.checkedListBox4.Size = new System.Drawing.Size(187, 349);
+            this.checkedListBox4.TabIndex = 2;
+            // 
+            // button2
+            // 
+            this.button2.Location = new System.Drawing.Point(6, 54);
+            this.button2.Name = "button2";
+            this.button2.Size = new System.Drawing.Size(188, 36);
+            this.button2.TabIndex = 1;
+            this.button2.Text = "Reset All Clients";
+            this.button2.UseVisualStyleBackColor = true;
+            // 
+            // button3
+            // 
+            this.button3.Location = new System.Drawing.Point(6, 13);
+            this.button3.Name = "button3";
+            this.button3.Size = new System.Drawing.Size(188, 36);
+            this.button3.TabIndex = 0;
+            this.button3.Text = "Reset Selected Clients";
+            this.button3.UseVisualStyleBackColor = true;
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1035, 606);
+            this.ClientSize = new System.Drawing.Size(1393, 541);
             this.Controls.Add(this.tabControl1);
             this.Name = "Form1";
             this.Text = "Form1";
@@ -441,6 +476,7 @@
             this.groupBox5.ResumeLayout(false);
             this.tabPage2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).EndInit();
+            this.groupBox6.ResumeLayout(false);
             this.ResumeLayout(false);
 
         }
@@ -460,8 +496,6 @@
         public System.Windows.Forms.TextBox textBoxSelectedMultiLauncher;
         public System.Windows.Forms.TextBox textBoxSelectedScript;
         public System.Windows.Forms.TextBox textBoxSelectedAutoLaunch;
-
-        private System.Windows.Forms.Button buttonStartServer;
         private System.Windows.Forms.Button buttonTradeAllClients;
         private System.Windows.Forms.Button buttonStopTradingAllClients;
         private System.Windows.Forms.Button buttonSelectScript;
@@ -490,6 +524,10 @@
         private System.Windows.Forms.TabPage tabPage1;
         private System.Windows.Forms.TabPage tabPage2;
         private System.Windows.Forms.Button buttonRestartSelectedClients;
+        private System.Windows.Forms.GroupBox groupBox6;
+        public System.Windows.Forms.CheckedListBox checkedListBox4;
+        private System.Windows.Forms.Button button2;
+        private System.Windows.Forms.Button button3;
     }
 }
 

@@ -37,17 +37,20 @@ namespace Bot_Server_WinForms
         { }
         public void Start()
         {
-             Form1.form.Invoke(new MethodInvoker(delegate ()
-            {
-                this.clientViewModel.Running = "Yes";
-                Form1.form.clientList.Add(this);
-                Form1.form.checkedListBox1.Items.Remove(this.characterName);
-                Form1.form.checkedListBox2.Items.Add(this.characterName);
-                Form1.form.checkedListBox3.Items.Add(this.characterName);
-                Form1.form.dataGridView1.Refresh();
-            }));
+            Connect();
+            Form1.form.Invoke(new MethodInvoker(delegate ()
+           {
+               this.clientViewModel.Running = "Yes";
+               Form1.form.clientList.Add(this);
+               Form1.form.checkedListBox1.Items.Remove(this.characterName);
+               Form1.form.checkedListBox2.Items.Add(this.characterName);
+               Form1.form.checkedListBox3.Items.Add(this.characterName);
+               Form1.form.dataGridView1.Refresh();
+           }));
             Thread ctThread = new Thread(StartListening);
             ctThread.Start();
+            Thread hearthBeatThread = new Thread(SendHeartBeat);
+            hearthBeatThread.Start();
         }
 
         public void Stop()
@@ -62,7 +65,7 @@ namespace Bot_Server_WinForms
                 Form1.form.checkedListBox3.Items.Remove(this.characterName);
                 Form1.form.dataGridView1.Refresh();
             }));
-     
+
             Disconnect();
         }
 
@@ -106,9 +109,12 @@ namespace Bot_Server_WinForms
                                 Form1.form.dataGridView1.Refresh();
                             }));
                             break;
+                        case "HeartBeat":
+                            SendMessage("HeartBeat");
+                            break;
 
                     }
-                    
+
 
                     //string serverResponse = "Server to client(" + clientId + ") ";
                     //byte[] sendBytes = Encoding.ASCII.GetBytes(serverResponse);
@@ -120,6 +126,18 @@ namespace Bot_Server_WinForms
                 {
                     Stop();
                     break;
+                }
+            }
+        }
+
+        public void SendHeartBeat()
+        {
+            while (true)
+            {
+                if (tcpClient != null)
+                {
+                    SendMessage("HeartBeat");
+                    Thread.Sleep(2000);
                 }
             }
         }

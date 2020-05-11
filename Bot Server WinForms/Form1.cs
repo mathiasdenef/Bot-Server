@@ -44,7 +44,7 @@ namespace Bot_Server_WinForms
         {
             try
             {
-                Log("Start listening to new clients...");
+                Log("Waiting new clients...");
                 TcpListener serverSocket = new TcpListener(IPAddress.Parse("127.0.0.1"), 11000);
                 serverSocket.Start();
 
@@ -56,9 +56,20 @@ namespace Bot_Server_WinForms
                     TcpClient clientSocket = serverSocket.AcceptTcpClient();
                     var characterName = WaitForCharacterNameForClient(clientSocket);
                     var client = sourceClientList.Where(x => x.characterName == characterName).FirstOrDefault();
+
+                    if (client == null)
+                    {
+                        Log("Could not find character name in client list");
+                        continue;
+                    }
+                    if (clientList.Contains(client))
+                    {
+                        Log(client.characterName + " is trying to reconnect, but is already connected. Hearthbeat from server to client is not running correctly");
+                        continue;
+                    }
+
                     client.tcpClient = clientSocket;
                     client.clientId = counter.ToString();
-                    client.Connect();
                     client.Start();
                 }
             }
@@ -281,8 +292,6 @@ namespace Bot_Server_WinForms
 
         public void StartServer()
         {
-            buttonStartServer.Enabled = false;
-            buttonStartServer.Text = "Started";
             Log("Server Started");
             Thread ctThread = new Thread(ListenToNewClients);
             ctThread.Start();
@@ -337,15 +346,30 @@ namespace Bot_Server_WinForms
         #region Form Handlers
         private void Form1_FormClosed(object sender, FormClosedEventArgs e)
         {
-            clientList.ToList().ForEach(
-                client =>
-                {
-                    client.SendMessage("Stopped Server");
-                });
+            //clientList.ToList().ForEach(
+            //    client =>
+            //    {
+            //        client.SendMessage("Stopped Server");
+            //    });
         }
         private void Form1_Load(object sender, EventArgs e)
         {
             StartServer();
+        }
+
+        private void groupBox4_Enter(object sender, EventArgs e)
+        {
+
+        }
+
+        private void groupBox3_Enter(object sender, EventArgs e)
+        {
+
+        }
+
+        private void tabPage1_Click(object sender, EventArgs e)
+        {
+
         }
 
 

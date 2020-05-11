@@ -12,7 +12,6 @@ namespace Bot_Server_WinForms
         public int SuccesRuns { get; set; }
         [DisplayName("Fail Runs")]
         public int FailRuns { get; set; }
-
         public string Running { get; set; } = "No";
     }
 }
