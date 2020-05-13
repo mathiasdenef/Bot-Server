@@ -11,7 +11,6 @@
 ; Script Start - Add your code below here
 
 #include <GWA2.au3>
-#include <trade_partner.au3>
 #include <GuiEdit.au3>
 
 #include <ButtonConstants.au3>
@@ -53,12 +52,12 @@ $LabelTotalEctos = GUICtrlCreateLabel("-", 352, 320, 50, 17)
 $Label9 = GUICtrlCreateLabel("Total Gold:", 272, 352, 63, 17)
 $LabeltotalGold = GUICtrlCreateLabel("-", 352, 352, 50, 17)
 GUICtrlCreateGroup("", -99, -99, 1, 1)
-$ButtonMaxMemory = GUICtrlCreateButton("Set Max Memory Usage", 25, 64, 194, 30)
+$ButtonResetSocket = GUICtrlCreateButton("Reset Socket", 25, 64, 194, 30)
 $CheckboxTrade = GUICtrlCreateCheckbox("Trade", 352, 24, 97, 17)
 $ButtonReduceMemory = GUICtrlCreateButton("Reduce Memory", 25, 128, 194, 30)
 $LogBoxTCP = GUICtrlCreateEdit("", 256, 56, 193, 118, BitOR($ES_AUTOVSCROLL,$ES_AUTOHSCROLL,$ES_READONLY,$ES_WANTRETURN))
 $CharacterName = $CmdLine[1]
-;$CharacterName = "Bob Danaerys"
+;~ $CharacterName = "Math Luvz Frenzy"
 GUICtrlSetData(-1, "")
 GUISetState(@SW_SHOW)
 #EndRegion ### END Koda GUI section ###
@@ -93,7 +92,6 @@ Global $eotnOutpostWintersdayMapId = 821
 Global $questMapId = 849
 
 Global $rendering = True
-Global $TradeAfterRun = False
 
 Global $enemiesInRange
 Global $alliesAll
@@ -104,16 +102,14 @@ Global $mwaypoints[16][4] = [[9413, -7116, "1", 1250], [7526, -8410, "2", 1250],
 
 Global $serverSocket = Null
 Global $goTrade
-Global $tradeAgent
-
+Global $bTradeItemsAndGold
+Global $heartBeatTimer
 
 GUICtrlSetOnEvent($ButtonStart, "EventHandler")
 GUICtrlSetOnEvent($CheckboxGraphics, "EventHandler")
 GUICtrlSetOnEvent($CheckboxTrade, "EventHandler")
+GUICtrlSetOnEvent($ButtonResetSocket, "EventHandler")
 GUISetOnEvent($gui_event_close, "EventHandler")
-
-
-
 
 $CurPID = WinGetProcess("Guild Wars")
 $CurHwnd = InitMemory($CurPID)
@@ -134,15 +130,11 @@ ControlClick("", "", "Start", "")
 
 While 1
 	If $boolrun Then
-		GUICtrlSetData($LabelWarSupplies, $warsupplies / 250)
-		GUICtrlSetData($LabelSuccesRuns, $successruns)
-		GUICtrlSetData($LabelFailRuns, $failruns)
-		GUICtrlSetData($LabelTotalEctos, $totalectos)
+		
 		main()
+
 	EndIf
-	If Not $boolrun Then
-		AdlibUnRegister("TimerUpdater")
-	EndIf
+	Sleep(250)
 WEnd
 
 Func EventHandler()
@@ -163,9 +155,15 @@ Func EventHandler()
 			setmaxmemory()
 			SetPlayerStatus(0)
 			AdlibRegister("ListenToServer")
+			StartTcp()
+			$heartBeatTimer = TimerInit()
 			;~ AdlibRegister("SendStatsToServer",60000)
-		Case $ButtonMaxMemory
-			setmaxmemory()
+		Case $ButtonResetSocket
+			Out("Reset Socket")
+			TCPCloseSocket($serverSocket)
+			TCPShutdown()
+			StartTcp()
+			$heartBeatTimer = TimerInit()
 		Case $CheckboxGraphics
 			clearmemory() 
 			togglerendering()
@@ -174,11 +172,7 @@ Func EventHandler()
 		Case $CheckboxTest
 			clearmemory()
 		Case $CheckboxTrade
-			If $TradeAfterRun = False Then
-				$TradeAfterRun = True
-			Else
-				$TradeAfterRun = False
-			EndIf
+			$bTradeItemsAndGold = Not $bTradeItemsAndGold ;flip boolean
 		Case $gui_event_close
 			Exit
 	EndSwitch
@@ -186,37 +180,24 @@ EndFunc
 
 Func main()
 	clearmemory()
-
-	If $TradeAfterRun = True Then
-		If getmapid() <> 642 Then
-			travelto(642)
-		EndIf
-		;~ $agents = GetMaxAgents()
-		;~ For $i = 1 To $agents
-			;~ MsgBox(0, "test",DllStructGetData($agents[$i], "Name"))
-			$lagent = GetNearestAgentToCoords(-2111, 955)
-			if DllStructGetData($lagent, "Id") <> 0 Then
-				$tradeAgent = $lagent
-				While $TradeAfterRun = True and CheckForWarSuppliesAndEctosAndGold() = True
-					WithdrawGold()
-					TradeItemsToPartner()
-					WithdrawGold()
-					sleep(2000)
-				WEnd
-			EndIf
-			$TradeAfterRun = False
-			GUICtrlSetState($CheckboxTrade,$GUI_UNCHECKED)
-			Out("Done trading, back to farming")
-		;~ Next
-	EndIf
-
+	TradeItemsAndGold()
+	CheckSocket()
 	BuyEctosIfEnoughMoney()
 	StartQuest()
 	DoQuest() 
 	WaitForReset()
 	UpdateStatistics()
-	;~ _purgehook()
 	Main()
+EndFunc
+
+Func CheckSocket() 
+	If TimerDiff($heartBeatTimer) > 60000 Then
+		Out("No heartbeat for more than 60s, trying to reconnect to server")
+		TCPCloseSocket($serverSocket)
+		TCPShutdown()
+		StartTcp()
+		$heartBeatTimer = TimerInit()
+	EndIf
 EndFunc
 
 Func ListenToServer()
@@ -224,22 +205,18 @@ Func ListenToServer()
 		StartTcp()
 	EndIf
 	$receivedData = TCPRecv($serverSocket, 10025)
-	;~ MsgBox(0, "", $receivedData)
-	;~ If @error Then
-	;~ 	StartTcp()
-	;~ EndIf
 
 	If $receivedData = '' Then Return
 	If $receivedData = 'Start Trading' Then 
-		$TradeAfterRun = true
-		Out("Trade after run")
+		$bTradeItemsAndGold = true
+		Out("Trading items and gold")
 		GUICtrlSetState($CheckboxTrade,$GUI_CHECKED)
 	EndIf	
 	If $receivedData = 'Stop Trading' Then 
-		$TradeAfterRun = False
-		Out("Stop trade after run")
+		$bTradeItemsAndGold = False
+		Out("Stop trading items and gold")
 		GUICtrlSetState($CheckboxTrade,$GUI_UNCHECKED)
-	EndIf	
+	EndIf		
 	If $receivedData = 'Stop process' Then 
 		Out("Stopping client")
 		ProcessClose($gwpid)
@@ -250,6 +227,9 @@ Func ListenToServer()
 	EndIf
 	If $receivedData = 'Stopped Server' Then 
 		$serverSocket = null
+	EndIf
+	If StringInStr($receivedData, 'HeartBeat') Then
+		$heartBeatTimer = TimerInit()
 	EndIf
 
 	Out($receivedData)
@@ -286,7 +266,35 @@ Func StartTcp()
 	EndIf
 EndFunc   ;==>StartTcp
 
+Func TradeItemsAndGold() 
+	If $bTradeItemsAndGold = False Then Return
+	If getmapid() <> 178 Then ;druids
+		Out("Travel to GH")
+		TravelGH()
+		Sleep(1000)
+	EndIf
+
+	While $bTradeItemsAndGold = True and CheckForWarSuppliesAndGold() = True
+		$lAgent = GetNearestAgentToCoords(-1045, 4595) ; real close to material trader
+		If GetAgentExists(DllStructGetData($lagent, "primary") = 7) Then
+			Out("Found trade agent")
+			Sleep(2500)
+			WithdrawGold()
+			TradeItemsToAgent($lAgent)
+			WithdrawGold()
+		EndIf
+		sleep(100)
+	WEnd
+	$bTradeItemsAndGold = False
+	GUICtrlSetState($CheckboxTrade,$GUI_UNCHECKED)
+	Out("Done trading, back to farming")
+EndFunc
 Func StartQuest()
+	If getMapId() <> $eotnOutpostMapId AND getMapId() <> $homMapId Then
+		Out("Going to eotn outpost")
+		travelto(642)
+		Sleep(1000)
+	EndIf
 	If getMapId() = $eotnOutpostMapId Then
 		EnterHom()
 	EndIf
@@ -302,6 +310,10 @@ Func DoQuest()
 	out("Running The Quest")
 	moveto(11828, -4815)
 	out("Wait here")
+	If getMapId() <> $questMapId Then
+		Out("Trying to start quest in wrong map")
+		main()
+	EndIf
 	If NOT waitforenemies(1550, 50000) Then
 		$runIsSuccessful = False
 		return False
@@ -327,6 +339,14 @@ Func WaitForReset()
 		$failruns = $failruns + 1
 		waitmaploading($homMapId)
 	EndIf
+	If getisdead(-2) Then
+		out("Died when WaitForReset()")
+		resign()
+		Sleep(500+getping())
+		returntooutpost()
+		$failruns = $failruns + 1
+		waitmaploading($homMapId)
+	EndIf
 EndFunc
 
 Func UpdateStatistics()
@@ -335,7 +355,7 @@ Func UpdateStatistics()
 		UpdateTimers()
 		$totalruns = $totalruns + 1
 		$successruns = $successruns + 1
-		$warsupplies += 5
+		FindWarSupplies()
 		Sleep(5000)
 	Else
 		StopRunTime()
@@ -351,55 +371,36 @@ Func UpdateStatistics()
 	GUICtrlSetData($LabelTotalEctos, $totalectos)
 EndFunc
 
-Func RunningQuest()
-	$runTime = TimerInit()
-	$isRunning = true
-	Local $ltime
-	$ltime = TimerInit()
-	If getmapid() <> $questMapId Then
-		Return False
-	EndIf
-	out("Running The Quest")
-	moveto(11828, -4815)
-	out("Wait here")
-	waitforenemies(1550, 50000)
-	
-	If NOT runwaypoints() Then Return False
-	out("Finished a cycle in " & Round(TimerDiff($ltime) / 60000) & " minutes.")
-	$antiBugTimer = TimerInit()
-	waitmaploading(646)
-	Do
-		Sleep(100)
-	Until getmapid() = $homMapId OR getisdead(-2) OR TimerDiff($antiBugTimer) > 90000
-	If TimerDiff($antiBugTimer) > 90000 Then
-		out("Stuck in mission")
-		resign()
-		Sleep(500+getping())
-		returntooutpost()
-		$failruns = $failruns + 1
-		waitmaploading($homMapId)
+Func EnterHom()
+	If getMapId() <> $eotnOutpostMapId Then
+		Out("Trying to ENTER hom in wrong map")
 		main()
 	EndIf
-	rndsleep(5000)
-	_purgehook()
-	Return True
-EndFunc
-
-Func enterhom()
-	out("Going To HoM")
-	moveto(-3477, 4245, 40)
-	moveto(-4060, 4675, 50)
-	moveto(-4448, 4952, 30)
-	move(-4779, 5209)
-	waitmaploading($homMapId)
-	rndsleep(6000)
+	$bugTimer = TimerInit()
+	Do
+		out("Going To HoM")
+		moveto(-3477, 4245, 40)
+		moveto(-4060, 4675, 50)
+		moveto(-4448, 4952, 30)
+		move(-4779, 5209)
+		waitmaploading($homMapId)
+	Until waitmaploading($homMapId) Or TimerDiff($bugTimer) > 30000
+	If TimerDiff($bugTimer) > 30000 Then
+		out("Debug timer - EnterHom()")
+		main()
+	EndIf
+	rndsleep(3000)
 EndFunc
 
 Func EnterQuest()
 	$HomTimeQuest = TimerInit()
 	out("Entering Quest")
-	Sleep(5000)
+	Sleep(4000)
 	Do
+		If getMapId() <> $homMapId Then
+			Out("Trying to ENTER quest in wrong map")
+			main()
+		EndIf
 		$npc = getnearestnpctocoords(-6753, 6513)
 		gotonpc($npc)
 		rndsleep(1000)
@@ -408,9 +409,7 @@ Func EnterQuest()
 		dialog(1586)
 	Until waitmaploading($questMapId) Or TimerDiff($HomTimeQuest) > 60000
 	If TimerDiff($HomTimeQuest) > 60000 Then
-		out("Stuck in HoM")
-		travelto($eotnOutpostMapId)
-		waitmaploading($eotnOutpostMapId)
+		out("Debug timer - EnterQuest()")
 		Main()
 	EndIf
 	rndsleep(3000)
@@ -460,7 +459,12 @@ Func RunAndSurvive($x, $y, $s = "", $z = 1250)
 			out("------------")
 			Return False
 		EndIf
+		If $bTradeItemsAndGold = True Then
+			Out("Interrupting for trade")
+			Main()
+		EndIf
 		rndsleep(100)
+		If getmaploading() == 2 Then disconnected()
 	Until computedistance($coordsx, $coordsy, $x, $y) < 250 OR $iblocked > 20
 	If getisdead(-2) Then
 		Return False
@@ -605,9 +609,13 @@ Func fight($arange)
 	Local $nx, $ny, $rnd, $rndrange
 	$ndeadlock = TimerInit()
 	Do
+		If $bTradeItemsAndGold = True Then
+			Out("Interrupting for trade")
+			Main()
+		EndIf
 		If getisdead(-2) Then ExitLoop
 		If TimerDiff($ndeadlock) > 120000 Then
-			ExitLoop
+			Out("Bug timer - fight()")
 			resign()
 			Sleep(500+getping())
 			returntooutpost()
@@ -618,6 +626,7 @@ Func fight($arange)
 		UpdateEnemiesInRange($arange)
 		UpdateTarget()
 		castengine()
+		If getmaploading() == 2 Then disconnected()
 	Until $enemiesInRange[0] = 0
 	Sleep(Random(500, 1000, 1))
 	If getisdead(-2) Then
@@ -708,6 +717,11 @@ Func waitforenemies($adist, $iideadlock, $param = False)
 			out("------------")
 			return false
 		EndIf
+		If $bTradeItemsAndGold = True Then
+			Out("Interrupting for trade")
+			Main()
+		EndIf
+		If getmaploading() == 2 Then disconnected()
 		sleep(300)
 	Until TimerDiff($ssdeadlock) > $iideadlock
 	Return true
@@ -728,24 +742,11 @@ Func FindWarSupplies()
 	Next
 EndFunc
 
-Func TradeItemsToPartner()
-	; find tradepartner and trade
-
-	out("Found " & $CharNameTraderpartner)
-	TradePlayer($tradeAgent)
-	Do
-		sleep(100)
-	Until getdistance(-2, $tradeAgent) < 350
-	sleep(2000)
+Func TradeItemsToAgent($lAgent)
+	TradePlayer($lAgent)
+	Sleep(2000)
 	; check bag for the right items and offer them
 	Local $counter = 0
-
-	;~ $itemsInBag = GetBagItemIDByModelID(35121)
-	;~ MsgBox(0, "", $itemsInBag)
-
-	;~ For $i = 1 To $itemsInBag
-	;~ 	MsgBox(0, "", $itemsInBag)
-	;~ Next
 	For $i = 1 To 4
 		For $j = 1 To DllStructGetData(getbag($i), "Slots")
 			If $counter = 7 Then ExitLoop
@@ -757,13 +758,8 @@ Func TradeItemsToPartner()
 					if $QuantityWS = 250 Then
 						OfferItem(DllStructGetData($litem, "Id"), $QuantityWS)
 						$counter += 1
-						sleep(300)
+						sleep(250)
 					EndIf
-				Case 930 ;ecto
-					$QuantityEcto = DllStructGetData($litem, "Quantity")
-					OfferItem(DllStructGetData($litem, "Id"), $QuantityEcto)
-					$counter += 1
-					sleep(300)
 			EndSwitch
 		Next
 	Next
@@ -788,11 +784,11 @@ Func GetAllAllies()
 	If $alliesAll[0] = 1 Then Return False
 EndFunc
 
-Func CheckForWarSuppliesAndEctosAndGold()
+Func CheckForWarSuppliesAndGold()
 	For $i = 1 To 4
 		For $j = 1 To DllStructGetData(getbag($i), "Slots")
 			$litem = getitembyslot($i, $j)
-			If GetGoldCharacter() > 0 Then
+			If GetGoldCharacter() > 0 OR GetGoldStorage() > 10000 Then
 				Return true
 			EndIf
 			Switch DllStructGetData($litem, "ModelID")
@@ -801,14 +797,10 @@ Func CheckForWarSuppliesAndEctosAndGold()
 					if $QuantityWS = 250 Then
 						Return True
 					EndIf
-				Case 930 ;ecto
-					$QuantityEcto = DllStructGetData($litem, "Quantity")
-					if $QuantityEcto >= 1 Then
-						Return True
-					EndIf
 			EndSwitch
 		Next
 	Next
+	Return False
 EndFunc
 
 Func UpdateTimers()
