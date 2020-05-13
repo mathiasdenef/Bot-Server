@@ -109,9 +109,6 @@ namespace Bot_Server_WinForms
                                 Form1.form.dataGridView1.Refresh();
                             }));
                             break;
-                        case "HeartBeat":
-                            SendMessage("HeartBeat");
-                            break;
 
                     }
 
@@ -137,17 +134,20 @@ namespace Bot_Server_WinForms
                 if (tcpClient != null)
                 {
                     SendMessage("HeartBeat");
-                    Thread.Sleep(2000);
+                    Thread.Sleep(30000);
                 }
             }
         }
 
         public void SendMessage(string text)
         {
-            NetworkStream networkStream = tcpClient.GetStream();
-            byte[] sendBytes = Encoding.ASCII.GetBytes(text);
-            networkStream.Write(sendBytes, 0, sendBytes.Length);
-            networkStream.Flush();
+            if (tcpClient != null)
+            {
+                NetworkStream networkStream = tcpClient.GetStream();
+                byte[] sendBytes = Encoding.ASCII.GetBytes(text);
+                networkStream.Write(sendBytes, 0, sendBytes.Length);
+                networkStream.Flush();
+            }
         }
 
         public void Log(string log)

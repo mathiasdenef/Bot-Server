@@ -87,7 +87,7 @@ namespace Bot_Server_WinForms.Game_Launcher
 
                     //attempt to start gw process
                     gw.Start();
-                    Thread.Sleep(6000);
+                    Thread.Sleep(10000);
                     success = true;
                 }
                 catch (Exception e)

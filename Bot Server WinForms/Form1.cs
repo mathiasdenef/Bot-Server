@@ -64,7 +64,7 @@ namespace Bot_Server_WinForms
                     }
                     if (clientList.Contains(client))
                     {
-                        Log(client.characterName + " is trying to reconnect, but is already connected. Hearthbeat from server to client is not running correctly");
+                        Log(client.characterName + " is trying to reconnect, but is already connected. Hearthbeat from server to client is probably not running correctly");
                         continue;
                     }
 
@@ -147,7 +147,7 @@ namespace Bot_Server_WinForms
                     {
 
                         StartClient(client);
-                        Thread.Sleep(10000);
+                        Thread.Sleep(12000);
                     }
                 }
             });
@@ -305,7 +305,7 @@ namespace Bot_Server_WinForms
 
             if (started)
             {
-
+                //Thread.Sleep(2000);
                 using (Process sProcess = new Process())
                 {
 
@@ -368,6 +368,11 @@ namespace Bot_Server_WinForms
         }
 
         private void tabPage1_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void textBoxStartupDelay_TextChanged(object sender, EventArgs e)
         {
 
         }
