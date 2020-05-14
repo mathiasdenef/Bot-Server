@@ -344,7 +344,6 @@ Func WaitForReset()
 		resign()
 		Sleep(500+getping())
 		returntooutpost()
-		$failruns = $failruns + 1
 		waitmaploading($homMapId)
 	EndIf
 EndFunc
@@ -621,7 +620,6 @@ Func fight($arange)
 			returntooutpost()
 			$failruns = $failruns + 1
 			waitmaploading($homMapId)
-			main()
 		EndIf
 		UpdateEnemiesInRange($arange)
 		UpdateTarget()
@@ -730,6 +728,7 @@ EndFunc
 Func FindWarSupplies()
 	Local $litem
 	Local $QuantityWS
+	$warsupplies = 0
 	For $i = 1 To 16
 		For $j = 1 To DllStructGetData(getbag($i), "Slots")
 			$litem = getitembyslot($i, $j)
