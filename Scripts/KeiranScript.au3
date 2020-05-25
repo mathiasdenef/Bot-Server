@@ -232,7 +232,7 @@ Func ListenToServer()
 		$heartBeatTimer = TimerInit()
 	EndIf
 
-	Out($receivedData)
+	;~ Out($receivedData)
 EndFunc
 
 Func SendStatsToServer()
@@ -895,7 +895,7 @@ EndFunc   ;==>TimerUpdater
 
 Func BuyEctosIfEnoughMoney() 
 	$lgold = getgoldcharacter()
-	If $lgold > 70000 Then
+	If $lgold > 95000 Then
 		If getmapid() <> 642 Then
 			travelto(642)
 		EndIf
