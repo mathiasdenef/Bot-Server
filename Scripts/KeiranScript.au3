@@ -56,8 +56,8 @@ $ButtonResetSocket = GUICtrlCreateButton("Reset Socket", 25, 64, 194, 30)
 $CheckboxTrade = GUICtrlCreateCheckbox("Trade", 352, 24, 97, 17)
 $ButtonReduceMemory = GUICtrlCreateButton("Reduce Memory", 25, 128, 194, 30)
 $LogBoxTCP = GUICtrlCreateEdit("", 256, 56, 193, 118, BitOR($ES_AUTOVSCROLL,$ES_AUTOHSCROLL,$ES_READONLY,$ES_WANTRETURN))
-$CharacterName = $CmdLine[1]
-;~ $CharacterName = "Math Luvz Frenzy"
+;~ $CharacterName = $CmdLine[1]
+$CharacterName = "Math Winning Games"
 GUICtrlSetData(-1, "")
 GUISetState(@SW_SHOW)
 #EndRegion ### END Koda GUI section ###
@@ -102,7 +102,7 @@ Global $mwaypoints[16][4] = [[9413, -7116, "1", 1250], [7526, -8410, "2", 1250],
 
 Global $serverSocket = Null
 Global $goTrade
-Global $bTradeItemsAndGold
+Global $bTradeItemsAndEctos
 Global $heartBeatTimer
 
 GUICtrlSetOnEvent($ButtonStart, "EventHandler")
@@ -111,22 +111,22 @@ GUICtrlSetOnEvent($CheckboxTrade, "EventHandler")
 GUICtrlSetOnEvent($ButtonResetSocket, "EventHandler")
 GUISetOnEvent($gui_event_close, "EventHandler")
 
-$CurPID = WinGetProcess("Guild Wars")
-$CurHwnd = InitMemory($CurPID)
-Do
-	Sleep(100)
-Until ScanForCharname() <> ""
-Sleep(1000)
-ControlSend($CurHwnd,"","","N")
-ControlSend($CurHwnd,"","","{ENTER}")
-Sleep(1000)
-Do
-	Sleep(100)
-Until GetAgentExists(-2)
-MemoryClose()
+;~ $CurPID = WinGetProcess("Guild Wars")
+;~ $CurHwnd = InitMemory($CurPID)
+;~ Do
+;~ 	Sleep(100)
+;~ Until ScanForCharname() <> ""
+;~ Sleep(1000)
+;~ ControlSend($CurHwnd,"","","N")
+;~ ControlSend($CurHwnd,"","","{ENTER}")
+;~ Sleep(1000)
+;~ Do
+;~ 	Sleep(100)
+;~ Until GetAgentExists(-2)
+;~ MemoryClose()
 
-Sleep(1000)
-ControlClick("", "", "Start", "")
+;~ Sleep(1000)
+;~ ControlClick("", "", "Start", "")
 
 While 1
 	If $boolrun Then
@@ -172,7 +172,7 @@ Func EventHandler()
 		Case $CheckboxTest
 			clearmemory()
 		Case $CheckboxTrade
-			$bTradeItemsAndGold = Not $bTradeItemsAndGold ;flip boolean
+			$bTradeItemsAndEctos = Not $bTradeItemsAndEctos ;flip boolean
 		Case $gui_event_close
 			Exit
 	EndSwitch
@@ -180,7 +180,7 @@ EndFunc
 
 Func main()
 	clearmemory()
-	TradeItemsAndGold()
+	TradeItemsAndEctos()
 	CheckSocket()
 	BuyEctosIfEnoughMoney()
 	StartQuest()
@@ -208,13 +208,13 @@ Func ListenToServer()
 
 	If $receivedData = '' Then Return
 	If $receivedData = 'Start Trading' Then 
-		$bTradeItemsAndGold = true
-		Out("Trading items and gold")
+		$bTradeItemsAndEctos = true
+		Out("Trading items and ectos")
 		GUICtrlSetState($CheckboxTrade,$GUI_CHECKED)
 	EndIf	
 	If $receivedData = 'Stop Trading' Then 
-		$bTradeItemsAndGold = False
-		Out("Stop trading items and gold")
+		$bTradeItemsAndEctos = False
+		Out("Stop trading items and ectos")
 		GUICtrlSetState($CheckboxTrade,$GUI_UNCHECKED)
 	EndIf		
 	If $receivedData = 'Stop process' Then 
@@ -266,26 +266,24 @@ Func StartTcp()
 	EndIf
 EndFunc   ;==>StartTcp
 
-Func TradeItemsAndGold() 
-	If $bTradeItemsAndGold = False Then Return
+Func TradeItemsAndEctos() 
+	If $bTradeItemsAndEctos = False Then Return
 	If getmapid() <> 178 Then ;druids
 		Out("Travel to GH")
 		TravelGH()
 		Sleep(1000)
 	EndIf
 
-	While $bTradeItemsAndGold = True and CheckForWarSuppliesAndGold() = True
+	While $bTradeItemsAndEctos = True and CheckForWarSuppliesAndEctos() = True
 		$lAgent = GetNearestAgentToCoords(-1045, 4595) ; real close to material trader
 		If GetAgentExists(DllStructGetData($lagent, "primary") = 7) Then
 			Out("Found trade agent")
 			Sleep(2500)
-			WithdrawGold()
 			TradeItemsToAgent($lAgent)
-			WithdrawGold()
 		EndIf
 		sleep(100)
 	WEnd
-	$bTradeItemsAndGold = False
+	$bTradeItemsAndEctos = False
 	GUICtrlSetState($CheckboxTrade,$GUI_UNCHECKED)
 	Out("Done trading, back to farming")
 EndFunc
@@ -458,7 +456,7 @@ Func RunAndSurvive($x, $y, $s = "", $z = 1250)
 			out("------------")
 			Return False
 		EndIf
-		If $bTradeItemsAndGold = True Then
+		If $bTradeItemsAndEctos = True Then
 			Out("Interrupting for trade")
 			Main()
 		EndIf
@@ -608,7 +606,7 @@ Func fight($arange)
 	Local $nx, $ny, $rnd, $rndrange
 	$ndeadlock = TimerInit()
 	Do
-		If $bTradeItemsAndGold = True Then
+		If $bTradeItemsAndEctos = True Then
 			Out("Interrupting for trade")
 			Main()
 		EndIf
@@ -715,7 +713,7 @@ Func waitforenemies($adist, $iideadlock, $param = False)
 			out("------------")
 			return false
 		EndIf
-		If $bTradeItemsAndGold = True Then
+		If $bTradeItemsAndEctos = True Then
 			Out("Interrupting for trade")
 			Main()
 		EndIf
@@ -750,20 +748,24 @@ Func TradeItemsToAgent($lAgent)
 		For $j = 1 To DllStructGetData(getbag($i), "Slots")
 			If $counter = 7 Then ExitLoop
 			$litem = getitembyslot($i, $j)
-			;~ MsgBox(0, "", DllStructGetData($litem, "Id"))
 			Switch DllStructGetData($litem, "ModelID")
 				Case 35121 ;war supplies
 					$QuantityWS = DllStructGetData($litem, "Quantity")
 					if $QuantityWS = 250 Then
 						OfferItem(DllStructGetData($litem, "Id"), $QuantityWS)
 						$counter += 1
-						sleep(250)
+						sleep(300)
 					EndIf
+				Case 930 ;ecto
+					$QuantityEcto = DllStructGetData($litem, "Quantity")
+					OfferItem(DllStructGetData($litem, "Id"), $QuantityEcto)
+					$counter += 1
+					sleep(300)
 			EndSwitch
 		Next
 	Next
 	sleep(500)
-	SubmitOffer(GetGoldCharacter())
+	SubmitOffer()
 	sleep(500)
 	AcceptTrade()
 	sleep(1000)
@@ -783,17 +785,19 @@ Func GetAllAllies()
 	If $alliesAll[0] = 1 Then Return False
 EndFunc
 
-Func CheckForWarSuppliesAndGold()
+Func CheckForWarSuppliesAndEctos()
 	For $i = 1 To 4
 		For $j = 1 To DllStructGetData(getbag($i), "Slots")
 			$litem = getitembyslot($i, $j)
-			If GetGoldCharacter() > 0 OR GetGoldStorage() > 10000 Then
-				Return true
-			EndIf
 			Switch DllStructGetData($litem, "ModelID")
 				Case 35121 ;war supplies
 					$QuantityWS = DllStructGetData($litem, "Quantity")
 					if $QuantityWS = 250 Then
+						Return True
+					EndIf
+				Case 930 ;ecto
+					$QuantityEcto = DllStructGetData($litem, "Quantity")
+					if $QuantityEcto >= 1 Then
 						Return True
 					EndIf
 			EndSwitch
@@ -895,9 +899,11 @@ EndFunc   ;==>TimerUpdater
 
 Func BuyEctosIfEnoughMoney() 
 	$lgold = getgoldcharacter()
-	If $lgold > 95000 Then
-		If getmapid() <> 642 Then
-			travelto(642)
+	If $lgold > 10000 Then
+		If getmapid() <> 178 Then
+			Out("Travel to GH")
+			TravelGH()
+			Sleep(1000)
 		EndIf
    		BuyEctos()
 	EndIf
@@ -905,21 +911,22 @@ EndFunc
 
 Func BuyEctos()
 	Local $EctoID = 930
-	Out("Normally Buying ectos, but now depositing money")
-	DepositGold()
-	Sleep(2000)
-	;~ $MerchantEcto = GetAgentByName("Roland [Rare Material Trader]")
-	;~ ChangeTarget($MerchantEcto)
-	;~ Sleep(1000)
-	;~ GoToNPC($MerchantEcto)
-	;~ TraderRequest($EctoID)
-	;~ Sleep(500 + 3 * GetPing())
-	;~ For $I = 1 To 8
-	;~ 	TraderRequest($EctoID)
-	;~ 	Sleep(500 + 3 * GetPing())
-	;~ 	TraderBuy()
-	;~ 	$totalectos += 1
-	;~ Next
+	Out("Buying ectos")
+	;~ DepositGold()
+	;~ Sleep(2000)
+	moveto(-853, 4501)
+	$MerchantEcto = GetNearestNPCToCoords(-1044, 4601)
+	ChangeTarget($MerchantEcto)
+	Sleep(1000)
+	GoToNPC($MerchantEcto)
+	TraderRequest($EctoID)
+	Sleep(500 + 3 * GetPing())
+	For $I = 1 To 15
+		TraderRequest($EctoID)
+		Sleep(500 + 3 * GetPing())
+		TraderBuy()
+		$totalectos += 1
+	Next
 EndFunc
 
 Func StopRunTime()
