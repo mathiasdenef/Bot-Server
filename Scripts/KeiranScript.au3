@@ -56,8 +56,8 @@ $ButtonResetSocket = GUICtrlCreateButton("Reset Socket", 25, 64, 194, 30)
 $CheckboxTrade = GUICtrlCreateCheckbox("Trade", 352, 24, 97, 17)
 $ButtonReduceMemory = GUICtrlCreateButton("Reduce Memory", 25, 128, 194, 30)
 $LogBoxTCP = GUICtrlCreateEdit("", 256, 56, 193, 118, BitOR($ES_AUTOVSCROLL,$ES_AUTOHSCROLL,$ES_READONLY,$ES_WANTRETURN))
-;~ $CharacterName = $CmdLine[1]
-$CharacterName = "Math Winning Games"
+$CharacterName = $CmdLine[1]
+;~ $CharacterName = "Math Winning Games"
 GUICtrlSetData(-1, "")
 GUISetState(@SW_SHOW)
 #EndRegion ### END Koda GUI section ###
@@ -111,22 +111,22 @@ GUICtrlSetOnEvent($CheckboxTrade, "EventHandler")
 GUICtrlSetOnEvent($ButtonResetSocket, "EventHandler")
 GUISetOnEvent($gui_event_close, "EventHandler")
 
-;~ $CurPID = WinGetProcess("Guild Wars")
-;~ $CurHwnd = InitMemory($CurPID)
-;~ Do
-;~ 	Sleep(100)
-;~ Until ScanForCharname() <> ""
-;~ Sleep(1000)
-;~ ControlSend($CurHwnd,"","","N")
-;~ ControlSend($CurHwnd,"","","{ENTER}")
-;~ Sleep(1000)
-;~ Do
-;~ 	Sleep(100)
-;~ Until GetAgentExists(-2)
-;~ MemoryClose()
+$CurPID = WinGetProcess("Guild Wars")
+$CurHwnd = InitMemory($CurPID)
+Do
+	Sleep(100)
+Until ScanForCharname() <> ""
+Sleep(1000)
+ControlSend($CurHwnd,"","","N")
+ControlSend($CurHwnd,"","","{ENTER}")
+Sleep(1000)
+Do
+	Sleep(100)
+Until GetAgentExists(-2)
+MemoryClose()
 
-;~ Sleep(1000)
-;~ ControlClick("", "", "Start", "")
+Sleep(1000)
+ControlClick("", "", "Start", "")
 
 While 1
 	If $boolrun Then
@@ -899,7 +899,7 @@ EndFunc   ;==>TimerUpdater
 
 Func BuyEctosIfEnoughMoney() 
 	$lgold = getgoldcharacter()
-	If $lgold > 10000 Then
+	If $lgold > 90000 Then
 		If getmapid() <> 178 Then
 			Out("Travel to GH")
 			TravelGH()
