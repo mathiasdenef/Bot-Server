@@ -1,16 +1,6 @@
-#cs ----------------------------------------------------------------------------
+#RequireAdmin
+#include "GwAu3/_GwAu3.au3"
 
- AutoIt Version: 3.3.14.0
- Author:         myName
-
- Script Function:
-	Template AutoIt script.
-
-#ce ----------------------------------------------------------------------------
-
-; Script Start - Add your code below here
-
-#include <GWA2.au3>
 #include <GuiEdit.au3>
 
 #include <ButtonConstants.au3>
@@ -56,16 +46,16 @@ $ButtonResetSocket = GUICtrlCreateButton("Reset Socket", 25, 64, 194, 30)
 $CheckboxTrade = GUICtrlCreateCheckbox("Trade", 352, 24, 97, 17)
 $ButtonReduceMemory = GUICtrlCreateButton("Reduce Memory", 25, 128, 194, 30)
 $LogBoxTCP = GUICtrlCreateEdit("", 256, 56, 193, 118, BitOR($ES_AUTOVSCROLL,$ES_AUTOHSCROLL,$ES_READONLY,$ES_WANTRETURN))
-$CharacterName = $CmdLine[1]
-;~ $CharacterName = "Math Winning Games"
+;~ $CharacterName = $CmdLine[1]
+$CharacterName = "Math Winning Games"
 GUICtrlSetData(-1, "")
 GUISetState(@SW_SHOW)
 #EndRegion ### END Koda GUI section ###
 ;~ Global $fLog = FileOpen("Keiran - Runner " & $CharName & ".log", 1) ;Log file
-Global $boolrun = False
+Global $BotActive = False
 Global $gwpid = -1
 
-Global $me = getagentbyid(-2)
+Global $me = GwAu3_Agent_GetAgentInfo()
 
 Global $Sec = -1 ;Variable for Seconds ## Start at -1 to Update Time and Statistics once at Start
 Global $Min = 0 ;Variable for Minutes
@@ -95,44 +85,28 @@ Global $rendering = True
 
 Global $enemiesInRange
 Global $alliesAll
-Global $target
-Global $isFighting = False
+;~ Global $target
 
-Global $mwaypoints[16][4] = [[9413, -7116, "1", 1250], [7526, -8410, "2", 1250], [4864, -8845, "3", 1250], [3438, -10528, "4", 1250], [2916, -11867, "5", 1250], [1749, -12765, "6", 1250], [266, -13059, "7", 1250], [-691, -12911, "8", 1250], [-2500, -11420, "9", 1250], [-4434, -12314, "10", 1250], [-6580, -9653, "11", 1250], [-10554, -8844, "12", 1250], [-12841, -8030, "13", 1250], [-15876, -8903, "Final Area 32", 1250], [-17109, -8978, "Final Area 33", 1250], ["WaitForEnemies", 1500, 25000, False]]
+Global $mwaypoints[15][4] = [[9413, -7116, "1", 1250], [7526, -8410, "2", 1250], [4864, -8845, "3", 1250], [3438, -10528, "4", 1250], [2916, -11867, "5", 1250], [1749, -12765, "6", 1250], [266, -13059, "7", 1250], [-691, -12911, "8", 1250], [-2500, -11420, "9", 1250], [-4434, -12314, "10", 1250], [-6580, -9653, "11", 1250], [-10554, -8844, "12", 1250], [-12841, -8030, "13", 1250], [-15876, -8903, "14", 1250], [-17109, -8978, "Final Area 15", 1250]]
 
 Global $serverSocket = Null
 Global $goTrade
 Global $bTradeItemsAndEctos
 Global $heartBeatTimer
 
+Global Enum $STATE_IDLE, $STATE_INITIALIZE, $STATE_ENTERQUEST, $STATE_RUNQUEST, $STATE_RESETQUEST, $STATE_HARDRESET, $STATE_BUY, $STATE_TRADE, $STATE_DISCONNECTED, $STATE_PAUSE, $STATE_ERROR, $STATE_UPDATESTATS
+Global $BotState = $STATE_IDLE
+
 GUICtrlSetOnEvent($ButtonStart, "EventHandler")
+GUICtrlSetOnEvent($ButtonReduceMemory, "EventHandler")
 GUICtrlSetOnEvent($CheckboxGraphics, "EventHandler")
 GUICtrlSetOnEvent($CheckboxTrade, "EventHandler")
 GUICtrlSetOnEvent($ButtonResetSocket, "EventHandler")
 GUISetOnEvent($gui_event_close, "EventHandler")
 
-$CurPID = WinGetProcess("Guild Wars")
-$CurHwnd = InitMemory($CurPID)
-Do
-	Sleep(100)
-Until ScanForCharname() <> ""
-Sleep(1000)
-ControlSend($CurHwnd,"","","N")
-ControlSend($CurHwnd,"","","{ENTER}")
-Sleep(1000)
-Do
-	Sleep(100)
-Until GetAgentExists(-2)
-MemoryClose()
-
-Sleep(1000)
-ControlClick("", "", "Start", "")
-
 While 1
-	If $boolrun Then
-		
-		main()
-
+	If $BotState <> $STATE_IDLE Then
+		HandleBotState()
 	EndIf
 	Sleep(250)
 WEnd
@@ -140,35 +114,16 @@ WEnd
 Func EventHandler()
 	Switch (@GUI_CtrlId)
 		Case $ButtonStart
-			GUICtrlSetData($ButtonStart, "Initializing...")
-			GUICtrlSetState($ButtonStart, $gui_disable)
-			If initialize($CharacterName, True, True, True) = False Then
-				MsgBox(0, "Error", "Can't find a Guild Wars client with that character name.")
-				Exit
-			EndIf
-			$boolrun = True
-			$gwpid = ProcessExists("gw.exe")		
-			WinSetTitle($Form, "", "Keiran - " & $CharacterName)
-			GUICtrlSetData($ButtonStart, "Bot Started")
-			AdlibRegister("TimerUpdater", 1000)
-			FindWarSupplies()
-			setmaxmemory()
-			SetPlayerStatus(0)
-			AdlibRegister("ListenToServer")
-			StartTcp()
-			$heartBeatTimer = TimerInit()
-			;~ AdlibRegister("SendStatsToServer",60000)
+			$BotState = $STATE_INITIALIZE
 		Case $ButtonResetSocket
-			Out("Reset Socket")
-			TCPCloseSocket($serverSocket)
-			TCPShutdown()
-			StartTcp()
-			$heartBeatTimer = TimerInit()
+			Out("stopped bot")
+			$BotState = $STATE_ERROR
 		Case $CheckboxGraphics
-			clearmemory() 
+			clearmemory()
 			togglerendering()
 		Case $ButtonReduceMemory
-			_reducememory()
+			GetNearestEnemyInRange(1100)
+			Out(GetNearestEnemyInRange(1100))
 		Case $CheckboxTest
 			clearmemory()
 		Case $CheckboxTrade
@@ -178,157 +133,306 @@ Func EventHandler()
 	EndSwitch
 EndFunc
 
-Func main()
-	clearmemory()
-	TradeItemsAndEctos()
-	CheckSocket()
-	BuyEctosIfEnoughMoney()
-	StartQuest()
-	DoQuest() 
-	WaitForReset()
-	UpdateStatistics()
-	Main()
+Func HandleBotState()
+	Switch $BotState
+		Case $STATE_INITIALIZE
+			Step_Initialize()
+		Case $STATE_ENTERQUEST
+			If Step_EnterQuest() Then
+				$BotState = $STATE_RUNQUEST
+			Else 
+				$BotState = $STATE_RESETQUEST
+			EndIf
+			Sleep(2000)
+		Case $STATE_RUNQUEST
+			If Step_RunQuest() Then
+				$BotState = $STATE_ENTERQUEST
+			Else
+				$BotState = $STATE_RESETQUEST
+				Return
+			EndIf
+		Case $STATE_RESETQUEST
+			If Step_ResetQuest() Then
+				$BotState = $STATE_ENTERQUEST
+			Else
+				$BotState = $STATE_HARDRESET
+			EndIf
+		Case $STATE_HARDRESET
+			If Step_HardReset() Then
+				$BotState = $STATE_ENTERQUEST
+			Else
+				$BotState = $STATE_ERROR
+			EndIf
+		Case $STATE_UPDATESTATS
+			Out("Step: UpdateStatistics")
+			UpdateStatistics()
+			$BotState = $STATE_INITIALIZE
+
+		Case $STATE_ERROR
+			Out("Error: Bot encountered an error and is now in error state.")
+			Sleep(60000)
+	EndSwitch
 EndFunc
 
-Func CheckSocket() 
-	If TimerDiff($heartBeatTimer) > 60000 Then
-		Out("No heartbeat for more than 60s, trying to reconnect to server")
-		TCPCloseSocket($serverSocket)
-		TCPShutdown()
-		StartTcp()
-		$heartBeatTimer = TimerInit()
+Func Step_Initialize()
+	Out("--Executing step: Initialize--")
+	Out("Start Initialize")
+	GUICtrlSetData($ButtonStart, "Initializing...")
+	GUICtrlSetState($ButtonStart, $gui_disable)
+	If GwAu3_Core_Initialize($CharacterName, True) = 0 Then
+		MsgBox(0, "Error", "Could not Find a Guild Wars client with a Character named '"&$CharacterName&"'")
+		_Exit()
 	EndIf
+	Out("Done Initialize")
+	WinSetTitle($Form, "", "Keiran - " & $CharacterName)
+	GUICtrlSetData($ButtonStart, "Bot Started")
+	$BotState = $STATE_ENTERQUEST
 EndFunc
 
-Func ListenToServer()
-	If $serverSocket = Null Then
-		StartTcp()
-	EndIf
-	$receivedData = TCPRecv($serverSocket, 10025)
+Func Step_EnterQuest()
+	Out("--Executing step: EnterQuest--")
 
-	If $receivedData = '' Then Return
-	If $receivedData = 'Start Trading' Then 
-		$bTradeItemsAndEctos = true
-		Out("Trading items and ectos")
-		GUICtrlSetState($CheckboxTrade,$GUI_CHECKED)
-	EndIf	
-	If $receivedData = 'Stop Trading' Then 
-		$bTradeItemsAndEctos = False
-		Out("Stop trading items and ectos")
-		GUICtrlSetState($CheckboxTrade,$GUI_UNCHECKED)
-	EndIf		
-	If $receivedData = 'Stop process' Then 
-		Out("Stopping client")
-		ProcessClose($gwpid)
-		Exit
-	EndIf	
-	If $receivedData = 'Close' Then 
-		Exit
+	If Not IsAlive() Then
+		Out("Step_EnterQuest(): Player is dead")
+		GwAu3_Map_ReturnToOutpost()
+		GwAu3_Map_WaitMapLoading()
+		GwAu3_Other_PingSleep(3000)
+		Return False
 	EndIf
-	If $receivedData = 'Stopped Server' Then 
-		$serverSocket = null
-	EndIf
-	If StringInStr($receivedData, 'HeartBeat') Then
-		$heartBeatTimer = TimerInit()
-	EndIf
+	If Not EnsureAtHom() Then Return False
+	If Not GoToScryingPool() Then Return False
+	If Not TriggerQuestDialog() Then Return False
 
-	;~ Out($receivedData)
+	Return True
 EndFunc
 
-Func SendStatsToServer()
-	Local $stats = "Stats|War Supplies="+ $warsupplies +"|Success Runs=" + $successruns + "|Fail Runs=" + $fail
-	TCPSend($serverSocket, $stats)
+Func Step_RunQuest()
+	Out("--Executing step: RunQuest--")
+	GwAu3_Map_WaitMapLoading()
+	Sleep(2000)
+	If GwAu3_Map_GetMapID() <> $questMapId Then
+		Out("Trying to start quest in wrong map")
+		Return False
+	EndIf
+	out("Started quest")
+	MoveTo(11828, -4815, False) ; Move to the quest start point
+	If Not WaitAndFight(1550, 50000) Then
+		$runIsSuccessful = False
+		return False
+	EndIf
+	If NOT RunWaypoints() Then
+		$runIsSuccessful = False
+		Return False
+	EndIf
+	If NOT WaitAndFight(1550, 50000) Then
+		$runIsSuccessful = False
+		return False
+	EndIf
+	
+	If Not WaitForAutoReturnToHom() Then
+		$runIsSuccessful = False
+		Return False
+	EndIf
 
+	Local $elapsedMs = TimerDiff($runTime)
+	Local $mins = Int($elapsedMs / 60000)
+	Local $secs = Int(Mod($elapsedMs, 60000) / 1000)
+	Out("Finished a cycle in " & $mins & ":" & StringFormat("%02d", $secs) & " minutes.")
+
+	Return True
 EndFunc
 
-Func StartTcp()
-	TCPStartup() ; Start the TCP service.
+Func Step_ResetQuest()
+	Local $antiBugTimer = TimerInit()
 
-	; Assign Local variables the loopback IP Address and the Port.
-	Local $sIPAddress = "127.0.0.1" ; This IP Address only works for testing on your own computer.
-	Local $iPort = 11000 ; Port used for the connection.
-
-	; Assign a Local variable the socket and connect to a Listening socket with the IP Address and Port specified.
-	$serverSocket = TCPConnect($sIPAddress, $iPort)
-
-	; If an error occurred display the error code and return False.
-	If @error Then
-		$serverSocket = null
-		;~ ; The server is probably offline/port is not opened on the server.
-		;~ Local $iError = @error
-		;~ MsgBox(BitOR($MB_SYSTEMMODAL, $MB_ICONHAND), "", "Could not connect, Error code: " & $iError)
-		;~ Return False
-	Else
-		Out("Connected to server")
-		Sleep(1000)
-		TCPSend($serverSocket, $characterName)
-		Out("Sent to server")
+	Out("--Executing step: ResetQuest--")
+	
+	Do
+		Out("Attempting to reset")
+		GwAu3_Chat_SendChat("resign", '/')
+		GwAu3_Other_PingSleep(2500)
+		GwAu3_Map_ReturnToOutpost()
+		GwAu3_Map_WaitMapLoading()
+		GwAu3_Other_PingSleep(3000)
+	Until GwAu3_Map_GetMapID() = $homMapId or GwAu3_Map_GetMapID() = $eotnOutpostMapId or TimerDiff($antiBugTimer) > 30000
+	If TimerDiff($antiBugTimer) > 30000 Then
+		Out("ResetQuest FAILED: Timeout after 30s - could not return to HoM or EotN.")
+		Return False
 	EndIf
-EndFunc   ;==>StartTcp
+	If GwAu3_Map_GetMapID() = $homMapId Then
+		Out("Reset complete: returned to HoM. Incrementing fail run counter.")
+		$failruns += 1
+	EndIf
+	If GwAu3_Map_GetMapID() = $eotnOutpostMapId Then
+		Out("Reset complete: returned to EotN outpost.")
+	EndIf
+	Return True
+EndFunc
 
-Func TradeItemsAndEctos() 
-	If $bTradeItemsAndEctos = False Then Return
-	If getmapid() <> 178 Then ;druids
-		Out("Travel to GH")
-		TravelGH()
-		Sleep(1000)
+Func Step_HardReset()
+	Out("--Executing step: HardReset--")
+	GwAu3_Map_TravelTo($eotnOutpostMapId)
+	GwAu3_Map_WaitMapLoading()
+	GwAu3_Other_PingSleep(2000)
+	If GwAu3_Map_GetMapID() <> $eotnOutpostMapId Then
+		Out("HardReset failed: Not in EotN outpost after reset.")
+		Return False
 	EndIf
 
-	While $bTradeItemsAndEctos = True and CheckForWarSuppliesAndEctos() = True
-		$lAgent = GetNearestAgentToCoords(-1045, 4595) ; real close to material trader
-		If GetAgentExists(DllStructGetData($lagent, "primary") = 7) Then
-			Out("Found trade agent")
-			Sleep(2500)
-			TradeItemsToAgent($lAgent)
+	Return True
+EndFunc
+
+Func EnsureAtHom()
+	Local $retry = 0
+	Local $maxRetries = 5
+	Do
+		If GwAu3_Map_GetMapID() <> $eotnOutpostMapId AND GwAu3_Map_GetMapID() <> $homMapId Then
+			Out("Traveling To EotN")
+			GwAu3_Map_TravelTo($eotnOutpostMapId)
+			GwAu3_Map_WaitMapLoading()
+			GwAu3_Other_PingSleep(2000)
 		EndIf
-		sleep(100)
-	WEnd
-	$bTradeItemsAndEctos = False
-	GUICtrlSetState($CheckboxTrade,$GUI_UNCHECKED)
-	Out("Done trading, back to farming")
-EndFunc
-Func StartQuest()
-	If getMapId() <> $eotnOutpostMapId AND getMapId() <> $homMapId Then
-		Out("Going to eotn outpost")
-		travelto(642)
-		Sleep(1000)
-	EndIf
-	If getMapId() = $eotnOutpostMapId Then
-		EnterHom()
-	EndIf
-	If getMapId() = $homMapId Then
-		EnterQuest()
-	EndIf
-EndFunc	
+		If GwAu3_Map_GetMapID() = $eotnOutpostMapId Then
+			Out("Entering HoM")
+			If Not EnterHom() Then Return False
+		EndIf
+		$retry += 1
+	Until GwAu3_Map_GetMapID() = $homMapId Or $retry >= $maxRetries
 
-Func DoQuest() 
+	If GwAu3_Map_GetMapID() <> $homMapId Then
+		Out("EnsureAtHom() failed: Max retries (" & $maxRetries & ") reached without reaching HoM.")
+		Return False
+	EndIf
+	Return True
+EndFunc
+
+Func GoToScryingPool()
+	Out("Going To Scrying Pool")
+
+	Local $target = GetAgentByPlayerNumber(5908)
+	If $target = 0 Then
+		Out("GoToScryingPool() failed: Could not find agent.")
+		Return False
+	EndIf
+
+	If Not MoveToNPC($target, False) Then 
+		Out("GoToScryingPool() failed: Could not go to NPC.")
+		Return False
+	EndIf
+
+	GwAu3_Other_PingSleep(2000)
+
+	Return True
+EndFunc
+
+Func TriggerQuestDialog()
+	Local $retry = 0
+	Local $maxRetries = 5
+
+	Do
+		Out("Triggering Quest Dialog, attempt " & ($retry + 1) & " of " & $maxRetries)
+		GwAu3_Other_PingSleep(1000)
+		GwAu3_Item_SwitchWeaponSet(3)
+		GwAu3_Other_PingSleep(1500)
+		GwAu3_Ui_Dialog(1598)
+		GwAu3_Other_PingSleep(3000)
+		$retry += 1
+	Until GwAu3_Map_GetMapID() = $questMapId Or $retry >= $maxRetries
+	If GwAu3_Map_GetMapID() <> $questMapId Then
+		Out("TriggerQuestDialog() failed: Reached max retries (" & $maxRetries & ") without entering quest map (MapID: " & GwAu3_Map_GetMapID() & ", Expected: " & $questMapId & ").")
+		Return False
+	EndIf
+
+	Return True
+EndFunc
+
+Func EnterHom()
+	Local $bugTimer = TimerInit()
+
+	If GwAu3_Map_GetMapID() <> $eotnOutpostMapId Then
+		Out("EnterHom() failed: Not in EotN outpost.")
+		Return False
+	EndIf
+	Do
+		MoveTo(-3477, 4245, False, 40)
+		MoveTo(-4060, 4675, False, 50)
+		MoveTo(-4779, 5209, False, 0)
+		GwAu3_Map_WaitMapLoading()
+		GwAu3_Other_PingSleep(2000)
+	Until GwAu3_Map_GetMapID() = $homMapId Or TimerDiff($bugTimer) > 30000
+
+	If GwAu3_Map_GetMapID() <> $homMapId Then
+		Out("EnterHom() failed: Timeout after 30s without entering HoM.")
+		Return False
+	EndIf
+	Return True
+EndFunc
+
+Func main()
+	;~ clearmemory()
+	;~ TradeItemsAndEctos()
+	;~ CheckSocket()
+	;~ BuyEctosIfEnoughMoney()
+	StartQuest()
+	;~ DoQuest()
+	;~ WaitForReset()
+	;~ UpdateStatistics()
+	;~ main()
+EndFunc
+
+Func DoQuest()
 	$runTime = TimerInit()
 	$isRunning = true
 	$ltime = TimerInit()
 	out("Running The Quest")
 	moveto(11828, -4815)
 	out("Wait here")
-	If getMapId() <> $questMapId Then
+	If GwAu3_Map_GetMapID() <> $questMapId Then
 		Out("Trying to start quest in wrong map")
 		main()
 	EndIf
-	If NOT waitforenemies(1550, 50000) Then
+	If NOT WaitAndFight(1550, 50000) Then
 		$runIsSuccessful = False
 		return False
 	EndIf
-	If NOT runwaypoints() Then
+	If NOT RunWaypoints() Then
 		$runIsSuccessful = False
 		Return False
 	EndIf
+	If NOT WaitAndFight(1550, 50000) Then
+		$runIsSuccessful = False
+		return False
+	EndIf
 	out("Finished a cycle in " & Round(TimerDiff($ltime) / 60000) & " minutes.")
 	$runIsSuccessful = True
+EndFunc
+
+Func WaitForAutoReturnToHom()
+	Local $tResetWait = TimerInit()
+	Out("Waiting to return to HoM...")
+
+	Do
+		Sleep(100)
+	Until GwAu3_Map_GetMapID() = $homMapId Or getisdead(-2) Or TimerDiff($tResetWait) > 30000
+
+	If GwAu3_Map_GetMapID() = $homMapId Then
+		Out("Returned to HoM successfully.")
+		Return True
+	EndIf
+	If Not IsAlive() Then
+		Out("WaitForAutoReturnToHom(): Player died")
+		Return False
+	Else
+		Out("WaitForAutoReturnToHom(): Timeout (stuck in mission)")
+		Return False
+	EndIf
 EndFunc
 
 Func WaitForReset()
 	$antiBugTimer = TimerInit()
 	Do
 		Sleep(100)
-	Until getmapid() = $homMapId OR getisdead(-2) OR TimerDiff($antiBugTimer) > 90000
+	Until GwAu3_Map_GetMapID() = $homMapId OR getisdead(-2) OR TimerDiff($antiBugTimer) > 90000
 	If TimerDiff($antiBugTimer) > 90000 Then
 		out("Stuck in mission")
 		resign()
@@ -368,132 +472,76 @@ Func UpdateStatistics()
 	GUICtrlSetData($LabelTotalEctos, $totalectos)
 EndFunc
 
-Func EnterHom()
-	If getMapId() <> $eotnOutpostMapId Then
-		Out("Trying to ENTER hom in wrong map")
-		main()
-	EndIf
-	$bugTimer = TimerInit()
-	Do
-		out("Going To HoM")
-		moveto(-3477, 4245, 40)
-		moveto(-4060, 4675, 50)
-		moveto(-4448, 4952, 30)
-		move(-4779, 5209)
-		waitmaploading($homMapId)
-	Until waitmaploading($homMapId) Or TimerDiff($bugTimer) > 30000
-	If TimerDiff($bugTimer) > 30000 Then
-		out("Debug timer - EnterHom()")
-		main()
-	EndIf
-	rndsleep(3000)
-EndFunc
-
-Func EnterQuest()
-	$HomTimeQuest = TimerInit()
-	out("Entering Quest")
-	Sleep(4000)
-	Do
-		If getMapId() <> $homMapId Then
-			Out("Trying to ENTER quest in wrong map")
-			main()
-		EndIf
-		$npc = getnearestnpctocoords(-6753, 6513)
-		gotonpc($npc)
-		rndsleep(1000)
-		changeweaponset(4)
-		rndsleep(1000)
-		dialog(1586)
-	Until waitmaploading($questMapId) Or TimerDiff($HomTimeQuest) > 60000
-	If TimerDiff($HomTimeQuest) > 60000 Then
-		out("Debug timer - EnterQuest()")
-		Main()
-	EndIf
-	rndsleep(3000)
-EndFunc
-
-Func runwaypoints()
+Func RunWaypoints()
 	Local $lx, $ly, $lmsg, $lrange
-	For $i = 0 To 15
+	For $i = 0 To 14
 		$lx = $mwaypoints[$i][0]
 		$ly = $mwaypoints[$i][1]
 		$lmsg = $mwaypoints[$i][2]
 		$lrange = $mwaypoints[$i][3]
 		If IsString($lx) Then
-			If NOT Call($lx, $ly, $lmsg, $lrange) Then return False
+			If Not Call($lx, $ly, $lmsg) Then return False
 		Else
-			If NOT RunAndSurvive($lx, $ly, $lmsg, $lrange) Then Return False
+			If Not MoveAndSurvive($lx, $ly, $lmsg) Then Return False
 		EndIf
 	Next
 	Return True
 EndFunc
 
-Func RunAndSurvive($x, $y, $s = "", $z = 1250)
-	$random = 50
-	$iblocked = 0
+Func MoveAndSurvive($x, $y, $s = "")
+	Local $iblocked = 0
+
 	If $s <> "" Then out($s)
-	move($x, $y, $random)
-	$lme = getagentbyid(-2)
-	$coordsx = DllStructGetData($lme, "X")
-	$coordsy = DllStructGetData($lme, "Y")
+	GwAu3_Map_Move($x, $y, 50)
 	Do
-		changeweaponset(1)
+		GwAu3_Item_SwitchWeaponSet(2)
 		Survive()
-		UpdateEnemiesInRange(1350)
-		$oldcoordsx = $coordsx
-		$oldcoordsy = $coordsy
-		$lme = getagentbyid(-2)
-		$coordsx = DllStructGetData($lme, "X")
-		$coordsy = DllStructGetData($lme, "Y")
-		If $oldcoordsx = $coordsx AND $oldcoordsy = $coordsy Then
+		Sleep(50)
+		If GwAu3_Agent_GetAgentInfo(-2, "MoveX") = 0 And GwAu3_Agent_GetAgentInfo(-2, "MoveY") = 0 And Not GwAu3_Agent_GetAgentInfo(-2, "IsKnockedDown") And Not GwAu3_Agent_GetAgentInfo(-2, "IsCasting") Then
 			$iblocked += 1
-			move($coordsx, $coordsy, 600)
-			rndsleep(350)
-			move($x, $y, $random)
+			GwAu3_Map_Move(GwAu3_Agent_GetAgentInfo(-2, "X"), GwAu3_Agent_GetAgentInfo(-2, "Y"), 600)
+			Sleep(350)
+			GwAu3_Map_Move($x, $y, 0)
+			Out("Blocked and trying to get free - attempt: " & $iblocked)
 		EndIf
-		If getisdead(-2) Then
-			out("DEAD RunAndSurvive")
-			out("------------")
-			Return False
-		EndIf
-		If $bTradeItemsAndEctos = True Then
-			Out("Interrupting for trade")
-			Main()
-		EndIf
-		rndsleep(100)
-		If getmaploading() == 2 Then disconnected()
-	Until computedistance($coordsx, $coordsy, $x, $y) < 250 OR $iblocked > 20
-	If getisdead(-2) Then
+		;~ If GetInstanceType() == 2 Then disconnected()
+	Until ComputeDistance(GwAu3_Agent_GetAgentInfo(-2, "X"), GwAu3_Agent_GetAgentInfo(-2, "Y"), $x, $y) < 250 or $iblocked > 20 or GwAu3_Agent_GetAgentInfo(-2, "HP") <= 0
+	If $iBlocked > 20 Then
+		Out("MoveAndSurvive() failed: Too many block attempts.")
+		Return False
+	EndIf
+	If GwAu3_Agent_GetAgentInfo(-2, "HP") <= 0 Then
+		Out("MoveAndSurvive() failed: Agent is dead.")
 		Return False
 	EndIf
 	Return True
 EndFunc
 
 Func Survive()
-	If DllStructGetData(GetAgentById(-2), "HP") < 0.8 Or GetHasHex(GetAgentById(-2)) Then
+	If GwAu3_Agent_GetAgentInfo(-2, "HP") < 0.8 Or GwAu3_Agent_GetAgentInfo(-2, "IsHexed") Then
 		If CanUseSkill(6, 2) Then
-			useskill(6, -2)
+			GwAu3_Skill_UseSkill(6, -2)
 			Return True
 		EndIf
 	EndIf
-	$meffects = geteffect()
-	If NOT IsArray($meffects) Then Dim $meffects[1] = [0]
-	$nearestenemy = getnearestenemytoagent(-2)
-	For $i = 1 To $meffects[0]
-		if DllStructGetData($meffects[$i], "SkillID") == 481 Then ; Cripple
-			if getdistance(-2, $nearestenemy) > 1100 Then ExitLoop
-			If CanUseSkill(5, 3) Then
-				changeweaponset(3)
-				useskill(5, $nearestenemy)
-				changeweaponset(1)
-			EndIf
+	if GwAu3_Agent_GetAgentEffectInfo(-2, 481, "HasEffect") Then ; Cripple
+		Local $target = GwAu3_Agent_TargetNearestEnemy(1100)
+		If $target = 0 Then
+			Out("Survive() failed: No target found for Cripple.")
+			Return False
 		EndIf
-	Next
-	
-	For $j = 1 To $enemiesInRange[0]
+		If CanUseSkill(5, 3) Then
+			GwAu3_Item_SwitchWeaponSet(0)
+			GwAu3_Skill_UseSkill(5, $target)
+			GwAu3_Item_SwitchWeaponSet(2)
+		EndIf
+	EndIf
+	Local $enemiesInRange = GetEnemiesInRange(1300)
+	For $target = 1 To $enemiesInRange[0]
 		;check for bull's strike, water trident and melandru's shot
-		If DllStructGetData($enemiesInRange[$j], "skill") = 332 OR DllStructGetData($enemiesInRange[$j], "skill") = 237 OR DllStructGetData($enemiesInRange[$j], "skill") = 853 Then
-			cancelaction()
+		If GwAu3_Agent_GetAgentInfo($target, "skill") = 332 OR GwAu3_Agent_GetAgentInfo($target, "skill") = 237 OR GwAu3_Agent_GetAgentInfo($target, "skill") = 853 Then
+			Out("Survive() found a bull's strike, water trident or melandru's shot. Cancelling action.")
+			GwAu3_Agent_CancelAction()
 			sleep(250)
 		EndIf
 	Next
@@ -501,15 +549,13 @@ Func Survive()
 EndFunc
 
 Func CanUseSkill($askillslot, $aenergy = 0, $asoftcounter = 10)
-	if getiscasting(-2) Then return false
-	if GetEnergy(getagentbyid(-2)) < $aenergy Then Return False
-	if DllStructGetData(getskillbar(), "Recharge" & $askillslot) <> 0 Then return False
+	if GwAu3_Agent_GetAgentInfo(-2, "IsCasting") Then return False
+	if GwAu3_Agent_GetAgentInfo(-2, "CurrentEnergy") < $aenergy Then Return False
+	if Not GwAu3_Skill_GetSkillbarInfo($askillslot, "IsRecharged") Then return False
 	; check for blind
-	$meffects = geteffect()
-	If NOT IsArray($meffects) Then Dim $meffects[1] = [0]
-	For $i = 1 To $meffects[0]
-		if DllStructGetData($meffects[$i], "SkillID") == 479 AND $askillslot <> 5 AND $askillslot <> 6 Then Return False
-	Next
+	$hasBlind = GwAu3_Agent_GetAgentEffectInfo(-2, 479, "HasEffect")
+	if $hasBlind AND $askillslot <> 5 AND $askillslot <> 6 Then Return False
+
 	Return True
 EndFunc
 
@@ -529,198 +575,181 @@ Func UpdateEnemiesInRange($range)
 	Next
 EndFunc
 
-Func UpdateTarget()
-	If $isFighting = true Then
-		$target = 0
-		For $i = 1 to 12
-			For $j = 1 To $enemiesInRange[0]
-				$agent = $enemiesInRange[$j]
-				$agentPlayerNumber = DllStructGetData($agent, "PlayerNumber")
-				Switch $i
-					Case 1
-						If $agentPlayerNumber = 8114 OR $agentPlayerNumber = 8115 Then ;peacekeeper
-							$target = $agent
-							ExitLoop
-						EndIf
-					Case 2
-						If $agentPlayerNumber >= 8203 AND $agentPlayerNumber <= 8210 Then ;monk
-							$target = $agent
-							ExitLoop
-						EndIf
-					Case 3
-						If $agentPlayerNumber >= 8195 AND $agentPlayerNumber <= 8202 Then ;ele
-							$target = $agent
-							ExitLoop
-						EndIf
-					Case 4
-						If $agentPlayerNumber >= 8232 AND $agentPlayerNumber <=  8237 Then ;rit
-							$target = $agent
-							ExitLoop
-						EndIf
-					Case 5
-						If $agentPlayerNumber >= 8181 AND $agentPlayerNumber <= 8186 Then ;mes
-							$target = $agent
-							ExitLoop
-						EndIf
-					Case 6
-						If $agentPlayerNumber >= 8187 AND $agentPlayerNumber <= 8194 Then ;necro
-							$target = $agent
-							ExitLoop
-						EndIf
-					Case 7
-						If $agentPlayerNumber >= 8176 AND $agentPlayerNumber <= 8180 Then ;sin
-							$target = $agent
-							ExitLoop
-						EndIf
-					Case 8
-						If $agentPlayerNumber >= 8219 AND $agentPlayerNumber <= 8226 Then ;ranger
-							$target = $agent
-							ExitLoop
-						EndIf
-					Case 9
-						If $agentPlayerNumber >= 8228 AND $agentPlayerNumber <= 8231 Then ;dervish
-							$target = $agent
-							ExitLoop
-						EndIf
-					Case 10
-						If $agentPlayerNumber >= 8211 AND $agentPlayerNumber <= 8218 Then ;warr
-							$target = $agent
-							ExitLoop
-						EndIf
-					Case 11
-						If $agentPlayerNumber >= 8238 AND $agentPlayerNumber <= 8241 Then ;para
-							$target = $agent
-							ExitLoop
-						EndIf
-					Case Else
-						$target = $agent
-					EndSwitch
-			Next
-		If $target <> 0 Then ExitLoop
+Func GetTarget($aEnemiesInRange)
+	$target = 0
+	For $i = 1 to 12
+		For $j = 1 To $aEnemiesInRange[0]
+			$agent = $aEnemiesInRange[$j]
+			$agentPlayerNumber = GwAu3_Agent_GetAgentInfo($agent, "PlayerNumber")
+			Switch $i
+				Case 1
+					If $agentPlayerNumber = 8114 OR $agentPlayerNumber = 8115 Then ;peacekeeper
+						Return $agent
+					EndIf
+				Case 2
+					If $agentPlayerNumber >= 8203 AND $agentPlayerNumber <= 8210 Then ;monk
+						Return $agent
+					EndIf
+				Case 3
+					If $agentPlayerNumber >= 8195 AND $agentPlayerNumber <= 8202 Then ;ele
+						Return $agent
+					EndIf
+				Case 4
+					If $agentPlayerNumber >= 8232 AND $agentPlayerNumber <=  8237 Then ;rit
+						Return $agent
+					EndIf
+				Case 5
+					If $agentPlayerNumber >= 8181 AND $agentPlayerNumber <= 8186 Then ;mes
+						Return $agent
+					EndIf
+				Case 6
+					If $agentPlayerNumber >= 8187 AND $agentPlayerNumber <= 8194 Then ;necro
+						Return $agent
+					EndIf
+				Case 7
+					If $agentPlayerNumber >= 8176 AND $agentPlayerNumber <= 8180 Then ;sin
+						Return $agent
+					EndIf
+				Case 8
+					If $agentPlayerNumber >= 8219 AND $agentPlayerNumber <= 8226 Then ;ranger
+						Return $agent
+					EndIf
+				Case 9
+					If $agentPlayerNumber >= 8228 AND $agentPlayerNumber <= 8231 Then ;dervish
+						Return $agent
+					EndIf
+				Case 10
+					If $agentPlayerNumber >= 8211 AND $agentPlayerNumber <= 8218 Then ;warr
+						Return $agent
+					EndIf
+				Case 11
+					If $agentPlayerNumber >= 8238 AND $agentPlayerNumber <= 8241 Then ;para
+						Return $agent
+					EndIf
+				Case Else
+					Return $agent
+			EndSwitch
 		Next
-	EndIf
+	Next
 EndFunc
 
-Func fight($arange)
-	Out("Fighting")
-	Local $nx, $ny, $rnd, $rndrange
-	$ndeadlock = TimerInit()
+Func Fight($arange)
+	Out("Fighting...")
+	Local $ndeadlock = TimerInit()
+
 	Do
-		If $bTradeItemsAndEctos = True Then
-			Out("Interrupting for trade")
-			Main()
+		If GwAu3_Agent_GetAgentInfo(-2, "HP") <= 0 Then
+			Out("Fight() aborted: player is dead.")
+			Return False
 		EndIf
-		If getisdead(-2) Then ExitLoop
+
 		If TimerDiff($ndeadlock) > 120000 Then
-			Out("Bug timer - fight()")
-			resign()
-			Sleep(500+getping())
-			returntooutpost()
-			$failruns = $failruns + 1
-			waitmaploading($homMapId)
+			Out("Fight() failed: 2-minute timeout reached.")
+			Return False
 		EndIf
-		UpdateEnemiesInRange($arange)
-		UpdateTarget()
-		castengine()
-		If getmaploading() == 2 Then disconnected()
-	Until $enemiesInRange[0] = 0
-	Sleep(Random(500, 1000, 1))
-	If getisdead(-2) Then
-		Return False
-	EndIf
+
+		Local $aEnemiesInRange = GetEnemiesInRange($arange)
+		If $aEnemiesInRange[0] = 0 Then ExitLoop
+
+		Local $target = GetTarget($aEnemiesInRange)
+		If $target <> 0 Then
+			CastEngine($target)
+		EndIf
+
+		Sleep(300)
+	Until False
+
+	GwAu3_Other_PingSleep(1000)
 	Return True
 EndFunc
 
-Func castengine($askill = False, $atarget = 0)
-	If NOT $askill Then
-		Local $ldeadlock = TimerInit()
-		If cast() Then
-			Do
-				Sleep(50)
-			Until TimerDiff($ldeadlock) > getping() + 150
-			Return True
-		Else
-			sleep(300)
-		EndIf
+Func CastEngine($target)
+	Local $ldeadlock = TimerInit()
+	If Cast($target) Then
+		Do
+			Sleep(50)
+		Until TimerDiff($ldeadlock) > GwAu3_Other_GetPing() + 150
+		Return True
+	Else
+		sleep(300)
 	EndIf
-	Return False
 EndFunc
 
-Func cast()
-	If DllStructGetData(GetAgentByID(-2), "HP") < 0.7 Then
+Func Cast($target)
+	If GwAu3_Agent_GetAgentInfo(-2, "HP") < 0.7 Then
 		If CanUseSkill(6, 2) Then
-			useskill(6, -2)
+			GwAu3_Skill_UseSkill(6, -2)
 			Return True
 		EndIf
 	EndIf
-	If getisknocked(-2) Then
+	If GwAu3_Agent_GetAgentInfo(-2, "IsKnockedDown") Then
 		Return False
 	EndIf
-	If gethascondition(-2) Then
+	If GwAu3_Agent_GetAgentInfo(-2, "IsConditioned") Then
 		If CanUseSkill(5, 3) Then
-			useskill(5, $target)
+			GwAu3_Skill_UseSkill(5, $target)
 			Return True
 		EndIf
 	EndIf
 	; Wait for Miku's hex when she's in range
 	If CanUseSkill(1, 2) Then
 		$miku = GetAgentById(3) ;Miku
-		If GetAgentExists(3) And getDistance($miku, -2) <= 1100 Then
-			For $i = 1 To $enemiesInRange[0]
-				If gethashex($enemiesInRange[$i]) Then
-					useskill(1, $enemiesInRange[$i])
+		
+		If $miku <> 0 And GwAu3_Agent_GetDistance($miku, -2) <= 1100 Then
+			Local $aEnemiesInRange = GetEnemiesInRange(1300)
+			For $i = 1 To $aEnemiesInRange[0]
+				If GwAu3_Agent_GetAgentInfo($aEnemiesInRange[$i], "IsHexed") Then
+					GwAu3_Skill_UseSkill(1, $aEnemiesInRange[$i])
 					Return True
 				EndIf
 			Next
 		Else
-			useskill(1, $target)
+			GwAu3_Skill_UseSkill(1, $target)
 			Return True
 		EndIf
 	EndIf
 	If CanUseSkill(3, 1) Then
-		useskill(3, $target)
+		GwAu3_Skill_UseSkill(3, $target)
 		Return True
 	EndIf
 	If CanUseSkill(4, 1) Then
-		useskill(4, $target)
+		GwAu3_Skill_UseSkill(4, $target)
 		Return True
 	EndIf
 	If CanUseSkill(2, 2) Then
-		useskill(2, $target)
+		GwAu3_Skill_UseSkill(2, $target)
 		Return True
 	EndIf
 	Return False
 EndFunc
 
-Func waitforenemies($adist, $iideadlock, $param = False)
-	Local $ltarget, $ldistance
-	Local $ssdeadlock = TimerInit()
-	out("Waiting For The Enemies")
+Func WaitAndFight($adist, $iideadlock)
+	Local $target, $ldistance
+	Local $tStart = TimerInit()
+	Out("WaitAndFight(): Waiting for enemies...")
+
 	Do
-		$ltarget = getnearestenemytoagent(-2)
-		If NOT IsDllStruct($ltarget) Then ContinueLoop
-		$ldistance = getdistance($ltarget, -2)
+		$target = GwAu3_Agent_TargetNearestEnemy()
+		$ldistance = GwAu3_Agent_GetDistance($target, -2)
+
 		If $ldistance < $adist Then
-			changeweaponset(3)
-			$isFighting = True
-			fight(1300)
-			$isFighting = False
-			changeweaponset(4)
+			GwAu3_Item_SwitchWeaponSet(0)
+			If Not Fight(1300) Then Return False
+			GwAu3_Item_SwitchWeaponSet(2)
+			Out("WaitAndFight(): Enemy encountered and fight finished.")
+			Return True
 		EndIf
 
-		If getisdead(-2) Then
-			out("DEAD WaitForEnemies")
-			out("------------")
-			return false
+		If GwAu3_Agent_GetAgentInfo(-2, "HP") <= 0 Then
+			Out("WaitAndFight(): Player died during wait.")
+			Return False
 		EndIf
-		If $bTradeItemsAndEctos = True Then
-			Out("Interrupting for trade")
-			Main()
-		EndIf
-		If getmaploading() == 2 Then disconnected()
-		sleep(300)
-	Until TimerDiff($ssdeadlock) > $iideadlock
-	Return true
+
+		Sleep(300)
+	Until TimerDiff($tStart) > $iideadlock
+
+	Out("WaitAndFight(): Timeout after " & ($iideadlock / 1000) & " seconds.")
+	Return False
 EndFunc
 
 Func FindWarSupplies()
@@ -897,17 +926,17 @@ Func TimerUpdater()
 	GUICtrlSetData($LabelTotalTime, $L_Hour & ":" & $L_Min & ":" & $L_Sec)
 EndFunc   ;==>TimerUpdater
 
-Func BuyEctosIfEnoughMoney() 
+Func BuyEctosIfEnoughMoney()
 	$lgold = getgoldcharacter()
 	If $lgold > 90000 Then
-		If getmapid() <> 178 Then
+		If GwAu3_Map_GetMapID() <> 178 Then
 			Out("Travel to GH")
 			TravelGH()
 			Sleep(1000)
 		EndIf
    		BuyEctos()
 	EndIf
-EndFunc	
+EndFunc
 
 Func BuyEctos()
 	Local $EctoID = 930
@@ -936,26 +965,6 @@ Func StopRunTime()
 	Global $Hour2 = 0 ;Variable for Hours
 EndFunc
 
-Func _purgehook()
-	togglerendering()
-	Sleep(Random(2000, 2500))
-	togglerendering()
-EndFunc
-
-Func togglerendering()
-	If $rendering Then
-		disablerendering()
-		$rendering = False
-		Sleep(Random(1000, 3000))
-		_reducememory()
-		AdlibRegister("_ReduceMemory", 20000)
-	Else
-		AdlibUnRegister("_ReduceMemory")
-		enablerendering()
-		$rendering = True
-	EndIf
-EndFunc
-
 Func Out($aString)
 	;~ FileWriteLine($fLog, @HOUR & ":" & @MIN & " - " & $aString)
 	ConsoleWrite(@HOUR & ":" & @MIN & " - " & $aString & @CRLF)
@@ -976,45 +985,191 @@ EndFunc
 
 #Region Memory
 
-Func InitMemory($aGW)
-		Local $lWinList
+Func OutDllStruct($struct, $fieldCount)
+    For $i = 1 To $fieldCount
+        Out("Field " & $i & ": " & DllStructGetData($struct, $i) & @CRLF)
+    Next
+EndFunc
 
-		$lWinList = WinList()
+Func OutDllStructArray($structArray)
+    Local $count = $structArray[0]
+    For $i = 1 To $count
+		$ptr = $structArray[$i]
 
-		For $i = 1 To $lWinList[0][0]
-			$mGWHwnd = $lWinList[$i][1]
-			If WinGetProcess($mGWHwnd) = $aGW Then
-				MemoryOpen($aGW)
-				ScanForCharname()
-				ExitLoop
-			EndIf
-		Next
-
-	If $mGWProcHandle = 0 Then Return 0
-
-	Scan()
-
-	$mBasePointer = MemoryRead(GetScannedAddress('ScanBasePointer', 8))
-	SetValue('BasePointer', '0x' & Hex($mBasePointer, 8))
-	$mAgentBase = GetScannedAddress('ScanAgentBase', -15) + 0x1E
-	$mAgentBase = $mAgentBase + MemoryRead($mAgentBase) + 4
-	$mAgentBase += 0x13
-	$mAgentBase = MemoryRead($mAgentBase)
-	SetValue('AgentBase', '0x' & Hex($mAgentBase, 8))
-	$mMaxAgents = $mAgentBase + 8
-	SetValue('MaxAgents', '0x' & Hex($mMaxAgents, 8))
-	$mMyID = MemoryRead(GetScannedAddress('ScanMyID', -3))
-	SetValue('MyID', '0x' & Hex($mMyID, 8))
-	$mMapLoading = $mAgentBase - 240
-	$mCurrentTarget = $mAgentBase - 1280
-	SetValue('PacketLocation', '0x' & Hex(MemoryRead(GetScannedAddress('ScanBaseOffset', 11)), 8))
-	Return $mGWHwnd
+		$field1 = GwAu3_Agent_GetAgentInfo($ptr, "AgentModelType")
+		$field2 = GwAu3_Agent_GetAgentInfo($ptr, "PlayerNumber")
+		Out("Agent #" & $i & ": veld1=" & $field1 & ", veld2=" & $field2)
+        ;~ Out("Struct #" & $i)
+        ;~ Out("Field" & ": " & DllStructGetData($structArray[$i], "ID"))
+        Out("--------------------")
+    Next
 EndFunc
 
 #EndRegion
 
+Func OutAllAgentProperties($agentPtr)
+    Local $properties[] = [ _
+        "vtable", "h0004", "h0008", "h000C", "h0010", "Timer", "Timer2", "h0018", "ID", "Z", _
+        "Width1", "Height1", "Width2", "Height2", "Width3", "Height3", "Rotation", "RotationCos", "RotationSin", _
+        "NameProperties", "Ground", "h0060", "TerrainNormalX", "TerrainNormalY", "TerrainNormalZ", "h0070", "X", "Y", "Plane", "h0080", _
+        "NameTagX", "NameTagY", "NameTagZ", "VisualEffects", "h0092", "h0094", "Type", "IsItemType", "IsGadgetType", "IsLivingType", _
+        "MoveX", "MoveY", "h00A8", "RotationCos2", "RotationSin2", "h00B4", "Owner", "CanPickUp", "ItemID", "ExtraType", "GadgetID", _
+        "h00D4", "AnimationType", "h00E4", "AttackSpeed", "AttackSpeedModifier", "PlayerNumber", "AgentModelType", "TransmogNpcId", _
+        "Equipment", "h0100", "Tags", "h0108", "Primary", "Secondary", "Level", "Team", "h010E", "h0110", "EnergyRegen", "Overcast", _
+        "EnergyPercent", "MaxEnergy", "CurrentEnergy", "h0124", "HPPips", "h012C", "HP", "MaxHP", "CurrentHP", "Effects", "EffectCount", _
+        "BuffCount", "IsBleeding", "IsConditioned", "IsCrippled", "IsDead", "IsDeepWounded", "IsPoisoned", "IsEnchanted", "IsDegenHexed", _
+        "IsHexed", "IsWeaponSpelled", "h013C", "Hex", "h0141", "ModelState", "IsKnockedDown", "IsMoving", "IsAttacking", "IsCasting", _
+        "IsIdle", "TypeMap", "InCombatStance", "HasQuest", "IsDeadByTypeMap", "IsFemale", "HasBossGlow", "IsHidingCap", _
+        "CanBeViewedInPartyWindow", "IsSpawned", "IsBeingObserved", "h015C", "InSpiritRange", "VisibleEffectsPtr", "VisibleEffectsPrevLink", _
+        "VisibleEffectsNextNode", "VisibleEffectCount", "HasVisibleEffects", "h017C", "LoginNumber", "IsPlayer", "IsNPC", "AnimationSpeed", _
+        "AnimationCode", "AnimationId", "h0190", "LastStrike", "Allegiance", "WeaponType", "Skill", "h01B6", "WeaponItemType", _
+        "OffhandItemType", "WeaponItemId", "OffhandItemId", "Name" _
+    ]
+    For $i = 0 To UBound($properties) - 1
+        Local $val = GwAu3_Agent_GetAgentInfo($agentPtr, $properties[$i])
+        Out($properties[$i] & " = " & $val)
+    Next
+EndFunc
 
+Func MoveToNPC($target, $block = True)
+	Local $lMapLoading = GwAu3_Map_GetInstanceInfo("IsLoading"), $lMapLoadingOld
+	Local $lBlocked = 0
 
+	GwAu3_Agent_GoNPC($target)
 
+	Do
+		Sleep(100)
+		If GwAu3_Agent_GetAgentInfo(-2, "HP") <= 0 Then
+			Out("MoveToNPC() aborted: player is dead.")
+			GwAu3_Agent_CancelAction()
+			Return False
+		EndIf
 
+		$lMapLoadingOld = $lMapLoading
+		$lMapLoading = GwAu3_Map_GetInstanceInfo("IsLoading")
+		If $lMapLoading <> $lMapLoadingOld Then
+			Out("MoveToNPC() interrupted: map loading detected.")
+			GwAu3_Agent_CancelAction()
+			Return False
+		EndIf
 
+		If $block = True Then
+			If GwAu3_Agent_GetAgentInfo(-2, "MoveX") == 0 And GwAu3_Agent_GetAgentInfo(-2, "MoveY") == 0 Then
+				$lBlocked += 1
+				Out("blocked"& $lBlocked)
+				GwAu3_Map_Move(GwAu3_Agent_GetAgentInfo(-2, "X"), GwAu3_Agent_GetAgentInfo(-2, "Y"), 100)
+				GwAu3_Other_PingSleep(50)
+				GwAu3_Agent_GoNPC($target)
+			EndIf
+
+			If $lBlocked > 14 Then
+				Out("MoveToNPC() failed: stuck trying to reach NPC.")
+				Return False
+			EndIf
+		EndIf
+		
+	Until GwAu3_Agent_GetDistance(-2, $target) < 150
+
+	Return True
+EndFunc
+
+Func MoveTo($x, $y, $antiBlock = True, $range = 150, $random = 50)
+	Local $lBlocked = 0
+	Local $lMapLoading = GwAu3_Map_GetInstanceInfo("IsLoading"), $lMapLoadingOld
+
+	Local $targetX = $x + Random(-$random, $random)
+	Local $targetY = $y + Random(-$random, $random)
+
+	GwAu3_Map_Move($targetX, $targetY, 0)
+
+	Do
+		Sleep(100)
+
+		Local $myX = GwAu3_Agent_GetAgentInfo(-2, "X")
+		Local $myY = GwAu3_Agent_GetAgentInfo(-2, "Y")
+
+		$lMapLoadingOld = $lMapLoading
+		$lMapLoading = GwAu3_Map_GetInstanceInfo("IsLoading")
+		If $lMapLoading <> $lMapLoadingOld Then
+			Return
+		EndIf
+
+		If GwAu3_Agent_GetAgentInfo(-2, "HP") <= 0 Then
+			Out("MoveTo() aborted: player is dead.")
+			Return
+		EndIf
+		If $antiBlock = True Then
+			If Not GwAu3_Map_GetInstanceInfo("IsLoading") And GwAu3_Agent_GetAgentInfo(-2, "MoveX") = 0 And GwAu3_Agent_GetAgentInfo(-2, "MoveY") = 0 Then
+				$lBlocked += 1
+				If $lBlocked > 14 Then
+					Out("MoveTo() failed: stuck trying to move.")
+					Return False
+				EndIf
+				Sleep(250)
+				$targetX = $x + Random(-$random, $random)
+				$targetY = $y + Random(-$random, $random)
+				Out("Blocked at " & $myX & ", " & $myY & ". Trying to move to " & $targetX & ", " & $targetY)
+				GwAu3_Map_Move($targetX, $targetY, 0)
+			EndIf
+		EndIf
+		
+	Until ComputeDistance($myX, $myY, $targetX, $targetY) < $range
+
+	Return True
+EndFunc
+
+Func GetAgentByPlayerNumber($playerNumber)
+	$agentPtrsArray = GwAu3_Agent_GetAgentArray()
+    Local $count = $agentPtrsArray[0]
+    For $i = 1 To $count
+        Local $ptr = $agentPtrsArray[$i]
+        Local $curPlayerNumber = GwAu3_Agent_GetAgentInfo($ptr, "PlayerNumber")
+        If $curPlayerNumber = $playerNumber Then
+            Return $ptr
+        EndIf
+    Next
+	Out("Agent with PlayerNumber " & $playerNumber & " not found.")
+    Return 0
+EndFunc
+
+Func GetAgentById($agentId)
+	$agentPtrsArray = GwAu3_Agent_GetAgentArray()
+    Local $count = $agentPtrsArray[0]
+    For $i = 1 To $count
+        Local $ptr = $agentPtrsArray[$i]
+        Local $cur = GwAu3_Agent_GetAgentInfo($ptr, "ID")
+        If $cur = $agentId Then
+            Return $ptr
+        EndIf
+    Next
+    Return 0
+EndFunc
+
+;~ Description: Returns the distance between two coordinate pairs.
+Func ComputeDistance($aX1, $aY1, $aX2, $aY2)
+	Return Sqrt(($aX1 - $aX2) ^ 2 + ($aY1 - $aY2) ^ 2)
+EndFunc   ;==>ComputeDistance
+
+Func GetEnemiesInRange($range)
+	Local $agentsInRange[1] = [0]
+	Local $agentPtrsArray = GwAu3_Agent_GetAgentArray()
+	Local $count = $agentPtrsArray[0]
+
+	For $i = 1 To $count
+		Local $agentPtr = $agentPtrsArray[$i]
+		If $agentPtr = 0 Then ContinueLoop
+		If GwAu3_Agent_GetAgentInfo($agentPtr, "HP") <= 0 Then ContinueLoop
+		If GwAu3_Agent_GetAgentInfo($agentPtr, "Allegiance") <> 3 Then ContinueLoop ;
+		If GwAu3_Agent_GetDistance($agentPtr, -2) <= $range Then
+			$agentsInRange[0] += 1
+			ReDim $agentsInRange[$agentsInRange[0] + 1]
+			$agentsInRange[$agentsInRange[0]] = $agentPtr
+		EndIf
+	Next
+
+	Return $agentsInRange
+EndFunc
+
+Func IsAlive()
+	Return GwAu3_Agent_GetAgentInfo(-2, "HP") > 0
+EndFunc
