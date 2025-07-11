@@ -1,64 +1,135 @@
-; This Version is specified for scripts coming from MrJambix, If it doesn't work for you check your functions vs this one.
-
-; Require admin privileges
-#RequireAdmin
-
-
-#Region ;**** Directives created by AutoIt3Wrapper_GUI ****
-#AutoIt3Wrapper_Outfile_type=a3x
-#AutoIt3Wrapper_Run_AU3Check=n
-#AutoIt3Wrapper_Run_Tidy=y
-#AutoIt3Wrapper_Run_Au3Stripper=y
-#Au3Stripper_Parameters=/pe /sf /tl
-#EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
 #include-once
+#RequireAdmin
 
 If @AutoItX64 Then
 	MsgBox(16, "Error!", "Please run all bots in 32-bit (x86) mode.")
 	Exit
 EndIf
 
+#Region Headers
+;=QUEST=+
+Global Const $HEADER_QUEST_ACCEPT = 0x50
+Global Const $HEADER_QUEST_REWARD = 0x50
+Global Const $HEADER_QUEST_ABANDON = 0x52
+Global Const $HEADER_HERO_AGGRESSION = 0x17
+Global Const $HEADER_HERO_LOCK = 0x18
+Global Const $HEADER_HERO_TOGGLE_SKILL = 0x1B
+Global Const $HEADER_HERO_CLEAR_FLAG = 0x1E
+Global Const $HEADER_HERO_PLACE_FLAG = 0x1D
+Global Const $HEADER_HERO_ADD = 0x21
+Global Const $HEADER_HERO_KICK = 0x22
+Global Const $HEADER_HEROES_KICK = 0x24
+Global Const $HEADER_PARTY_PLACE_FLAG = 0x1E
+Global Const $HEADER_PARTY_CLEAR_FLAG = 0x1E
+Global Const $HEADER_HENCHMAN_ADD = 0xC5
+Global Const $HEADER_PARTY_LEAVE = 0xAA
+Global Const $HEADER_HENCHMAN_KICK = 0xC6
+Global Const $HEADER_CALL_TARGET = 0x26
+Global Const $HEADER_ATTACK_AGENT = 0x2D
+Global Const $HEADER_CANCEL_ACTION = 0x2F
+Global Const $HEADER_GO_PLAYER = 0x3A
+Global Const $HEADER_NPC_TALK = 0x40
+Global Const $HEADER_SIGNPOST_RUN = 0x58
+Global Const $HEADER_ITEM_DROP = 0x33
+Global Const $HEADER_GOLD_DROP = 0x36
+Global Const $HEADER_STOP_MAINTAIN_ENCH = 0x40
+Global Const $HEADER_ITEM_EQUIP = 0x37
+Global Const $HEADER_ITEM_PICKUP = 0x46
+Global Const $HEADER_ITEM_DESTROY = 0x70
+Global Const $HEADER_ITEM_ID = 0x73
+Global Const $HEADER_ITEM_MOVE = 0x79
+Global Const $HEADER_ITEMS_ACCEPT_UNCLAIMED = 0x7A
+Global Const $HEADER_SALVAGE_MATS = 0x7E
+Global Const $HEADER_SALVAGE_MODS = 0x81
+Global Const $HEADER_ITEM_USE = 0x85
+Global Const $HEADER_UPGRADE = 0x84
+Global Const $HEADER_UPGRADE_ARMOR_1 = 0x81
+Global Const $HEADER_UPGRADE_ARMOR_2 = 0x84
+Global Const $HEADER_TRADE_PLAYER = 0x50
+Global Const $HEADER_TRADE_OFFER_ITEM = 0x02
+Global Const $HEADER_TRADE_SUBMIT_OFFER = 0x03
+Global Const $HEADER_TRADE_CHANGE_OFFER = 0x06
+Global Const $HEADER_TRADE_CANCEL = 0x01
+Global Const $HEADER_TRADE_ACCEPT = 0x07
+Global Const $HEADER_MAP_TRAVEL = 0xB9
+Global Const $HEADER_GUILDHALL_TRAVEL = 0xB8
+Global Const $HEADER_GUILDHALL_LEAVE = 0xBA
+Global Const $HEADER_OPEN_GB_WINDOW = 0x9F
+Global Const $HEADER_CLOSE_GB_WINDOW = 0xA0
+Global Const $HEADER_START_RATING_GVG = 0xA9
+Global Const $HEADER_FACTION_DONATE = 0x3C
+Global Const $HEADER_TITLE_DISPLAY = 0x5F
+Global Const $HEADER_TITLE_CLEAR = 0x60
+Global Const $HEADER_DIALOG = 0x42
+Global Const $HEADER_CINEMATIC_SKIP = 0x6A
+Global Const $HEADER_SET_SKILLBAR_SKILL = 0x63
+Global Const $HEADER_LOAD_SKILLBAR = 0x64
+Global Const $HEADER_CHANGE_SECONDARY = 0x48
+Global Const $HEADER_SKILL_USE_ALLY = 0x49
+Global Const $HEADER_SKILL_USE_FOE = 0x49
+Global Const $HEADER_SKILL_USE_ID = 0x49
+Global Const $HEADER_SET_ATTRIBUTES = 0x0F
+Global Const $HEADER_CHEST_OPEN = 0x5A
+Global Const $HEADER_CHANGE_GOLD = 0x83
+Global Const $HEADER_MODE_SWITCH = 0xA3
+Global Const $HEADER_MISSION_ENTER = 0xAC
+Global Const $HEADER_MISSION_FOREIGN_ENTER = 0xA8
+Global Const $HEADER_OUTPOST_RETURN = 0xAF
+Global Const $HEADER_SEND_CHAT = 0x6B
+Global Const $HEADER_OPEN_SKILLS = 0x41
+Global Const $HEADER_EQUIP_BAG = 0x71
+Global Const $HEADER_USE_SKILL = 0x4D
+Global Const $HEADER_HOM_DIALOG = 0x59
+Global Const $HEADER_PROFESSION_ULOCK = 0xB7
+#EndRegion Headers
+
 #Region Declarations
-; General settings and handles
-Local $mGWA2Version = '0.0.0'
-Local $mKernelHandle, $mGWProcHandle, $mMemory
+Local $mKernelHandle
+Local $mGWProcHandle
+Local $mMemory
+Local $mLabels[1][2]
 Local $mBase = 0x00C50000
 Local $mASMString, $mASMSize, $mASMCodeOffset
-Local $SecondInject, $Rendering = True
+Local $SecondInject
 
-; GUI elements
-Local $mGUI = GUICreate('GWA2')
-GUIRegisterMsg(0x501, 'Event')
-
-; Structs for logging
+Local $mGUI = GUICreate('GWA�'), $mSkillActivate, $mSkillCancel, $mSkillComplete, $mChatReceive, $mLoadFinished
 Local $mSkillLogStruct = DllStructCreate('dword;dword;dword;float')
 Local $mSkillLogStructPtr = DllStructGetPtr($mSkillLogStruct)
 Local $mChatLogStruct = DllStructCreate('dword;wchar[256]')
 Local $mChatLogStructPtr = DllStructGetPtr($mChatLogStruct)
+GUIRegisterMsg(0x501, 'Event')
 
-; Game-related variables
 Local $mQueueCounter, $mQueueSize, $mQueueBase
 Local $mGWWindowHandle
-Local $mTargetLogBase, $mStringLogBase, $mSkillBase
+Local $mTargetLogBase
+Local $mStringLogBase
+Local $mSkillBase
 Local $mEnsureEnglish
-Local $mCurrentTarget ;,$mMyID
-Local $packetlocation
-Local $mAgentBase, $mBasePointer, $mAgentArray
-Local $mRegion;, $mLanguage
-Local $mPing, $mCharname;, $mMapID
-Local $mMaxAgents, $mMapLoading, $mMapIsLoaded, $mLoggedIn
-Local $mStringHandlerPtr, $mWriteChatSender
+Local $mMyID, $mCurrentTarget
+Local $mAgentBase
+Local $mBasePointer
+Local $mRegion, $mLanguage
+Local $mPing
+Local $mCharname
+Local $mMapID
+Local $mMaxAgents
+Local $mMapLoading
+Local $mMapIsLoaded
+Local $mLoggedIn
+Local $mStringHandlerPtr
+Local $mWriteChatSender
 Local $mTraderQuoteID, $mTraderCostID, $mTraderCostValue
-Local $mSkillTimer, $mBuildNumber
-Local $lTemp
+Local $mSkillTimer
+Local $mBuildNumber
 Local $mZoomStill, $mZoomMoving
-Local $mDisableRendering, $mAgentCopyCount, $mAgentCopyBase
-Local $mCurrentStatus, $mLastDialogID
-Local $mUseStringLog, $mUseEventSystem
-Local $mCharslots
-Local $mInstanceInfo, $mAreaInfo
-Local $mAttributeInfo
-Local $mWorldConst
+Local $mDisableRendering
+Local $mAgentCopyCount
+Local $mAgentCopyBase
+Local $mCurrentStatus
+Local $mLastDialogID
+
+Local $mUseStringLog
+Local $mUseEventSystem
 #EndRegion Declarations
 
 #Region CommandStructs
@@ -135,22 +206,7 @@ Local $mChangeStatus = DllStructCreate('ptr;dword')
 Local $mChangeStatusPtr = DllStructGetPtr($mChangeStatus)
 
 Global $MTradeHackAddress
-Global $mLabels[1][2] = [[0]]
 #EndRegion CommandStructs
-
-#Region Gwa2 Structs
-Global $g_AgentStruct = DllStructCreate('ptr vtable;dword h0004[4];dword timer;dword timer2;dword h0018[4];long Id;float Z;float width1;float height1;float width2;float height2;float width3;float height3;float Rotation;float rotation_cos;float rotation_sin;dword NameProperties;dword ground;dword h0060;float terrain_normal_x;float terrain_normal_y;dword terrain_normal_z;byte h0070[4];float X;float Y;dword plane;byte h0080[4];float NameTagX;float NameTagY;float NameTagZ;short visual_effects;short h0092;dword h0094[2];long Type;float MoveX;float MoveY;dword h00A8;float rotation_cos2;float rotation_sin2;dword h00B4[4];long Owner;dword ItemID;dword ExtraType;dword GadgetID;dword h00D4[3];float animation_type;dword h00E4[2];float AttackSpeed;float AttackSpeedModifier;short PlayerNumber;short agent_model_type;dword transmog_npc_id;ptr Equip;dword h0100;ptr tags;short h0108;byte Primary;byte Secondary;byte Level;byte Team;byte h010E[2];dword h0110;float energy_regen;float overcast;float EnergyPercent;dword MaxEnergy;dword h0124;float HPPips;dword h012C;float HP;dword MaxHP;dword Effects;dword h013C;byte Hex;byte h0141[19];dword ModelState;dword TypeMap;dword h015C[4];dword InSpiritRange;dword visible_effects;dword visible_effects_ID;dword visible_effects_has_ended;dword h017C;dword LoginNumber;float animation_speed;dword animation_code;dword animation_id;byte h0190[32];byte LastStrike;byte Allegiance;short WeaponType;short Skill;short h01B6;byte weapon_item_type;byte offhand_item_type;short WeaponItemId;short OffhandItemId')
-Global $g_ItemStruct = DllStructCreate('long Id;long AgentId;ptr BagEquiped;ptr Bag;ptr ModStruct;long ModStructSize;ptr Customized;long ModelFileID;byte Type;byte unknown4;short ExtraId;short Value;short Unknown1;short Interaction;long ModelId;ptr InfoString;ptr NameEnc;ptr CompleteNameEnc;ptr SingleItemName;long Unknown2[2];short ItemFormula;byte IsMaterialSalvageable;byte Unknown3;short Quantity;byte Equiped;byte Profession;byte Slot')
-Global $g_BuffStruct = DllStructCreate('long SkillId;long unknown1;long BuffId;long TargetId')
-Global $g_EffectStruct = DllStructCreate('long SkillId;long AttributeLevel;long EffectId;long AgentId;float Duration;long TimeStamp')
-Global $g_BagStruct = DllStructCreate('long TypeBag;long index;long unknown1;ptr containerItem;long ItemsCount;ptr bagArray;ptr itemArray;long fakeSlots;long slots')
-Global $g_SkillbarStruct = DllStructCreate('long AgentId;long AdrenalineA1;long AdrenalineB1;dword Recharge1;dword Id1;dword Event1;long AdrenalineA2;long AdrenalineB2;dword Recharge2;dword Id2;dword Event2;long AdrenalineA3;long AdrenalineB3;dword Recharge3;dword Id3;dword Event3;long AdrenalineA4;long AdrenalineB4;dword Recharge4;dword Id4;dword Event4;long AdrenalineA5;long AdrenalineB5;dword Recharge5;dword Id5;dword Event5;long AdrenalineA6;long AdrenalineB6;dword Recharge6;dword Id6;dword Event6;long AdrenalineA7;long AdrenalineB7;dword Recharge7;dword Id7;dword Event7;long AdrenalineA8;long AdrenalineB8;dword Recharge8;dword Id8;dword Event8;dword disabled;long unknown1[2];dword Casting;long unknown2[2]')
-Global $g_SkillStruct = DllStructCreate('long ID;long Unknown1;long campaign;long Type;long Special;long ComboReq;long Effect1;long Condition;long Effect2;long WeaponReq;byte Profession;byte Attribute;short Title;long PvPID;byte Combo;byte Target;byte unknown3;byte EquipType;byte Overcast;byte EnergyCost;byte HealthCost;byte unknown4;dword Adrenaline;float Activation;float Aftercast;long Duration0;long Duration15;long Recharge;long Unknown5[4];dword SkillArguments;long Scale0;long Scale15;long BonusScale0;long BonusScale15;float AoERange;float ConstEffect;dword caster_overhead_animation_id;dword caster_body_animation_id;dword target_body_animation_id;dword target_overhead_animation_id;dword projectile_animation_1_id;dword projectile_animation_2_id;dword icon_file_id;dword icon_file_id_2;dword name;dword concise;dword description')
-Global $g_AttributeStruct = DllStructCreate('dword profession_id;dword attribute_id;dword name_id;dword desc_id;dword is_pve')
-Global $g_AreaInfoStruct = DllStructCreate("dword campaign;dword continent;dword region;dword regiontype;dword flags;dword thumbnail_id;dword min_party_size;dword max_party_size;dword min_player_size;dword max_player_size;dword controlled_outpost_id;dword fraction_mission;dword min_level;dword max_level;dword needed_pq;dword mission_maps_to;dword x;dword y;dword icon_start_x;dword icon_start_y;dword icon_end_x;dword icon_end_y;dword icon_start_x_dupe;dword icon_start_y_dupe;dword icon_end_x_dupe;dword icon_end_y_dupe;dword file_id;dword mission_chronology;dword ha_map_chronology;dword name_id;dword description_id")
-Global $g_QuestStruct = DllStructCreate('long id;long LogState;ptr Location;ptr Name;ptr NPC;long MapFrom;float X;float Y;long Z;long unlnown1;long MapTo;ptr Description;ptr Objective')
-Global $g_WorldStruct = DllStructCreate('long MinGridWidth;long MinGridHeight;long MaxGridWidth;long MaxGridHeight;long Flags;long Type;long SubGridWidth;long SubGridHeight;long StartPosX;long StartPosY;long MapWidth;long MapHeight')
-#EndRegion
 
 #Region Memory
 ;~ Description: Internal use only.
@@ -181,7 +237,26 @@ Func MemoryWrite($aAddress, $aData, $aType = 'dword')
 	DllStructSetData($lBuffer, 1, $aData)
 	DllCall($mKernelHandle, 'int', 'WriteProcessMemory', 'int', $mGWProcHandle, 'int', $aAddress, 'ptr', DllStructGetPtr($lBuffer), 'int', DllStructGetSize($lBuffer), 'int', '')
 EndFunc   ;==>MemoryWrite
-
+Func PickUpLoot()
+Local $lAgent
+Local $aitem
+Local $lDeadlock
+For $i = 1 To GetMaxAgents()
+If GetIsDead(-2) Then Return
+$lAgent = GetAgentByID($i)
+If DllStructGetData($lAgent, 'Type') <> 0x400 Then ContinueLoop
+$aitem = GetItemByAgentID($i)
+If CanPickUp($aitem) Then
+PickUpItem($aitem)
+$lDeadlock = TimerInit()
+While GetAgentExists($i)
+Sleep(100)
+If GetIsDead(-2) Then Return
+If TimerDiff($lDeadlock) > 10000 Then ExitLoop
+WEnd
+EndIf
+Next
+EndFunc
 ;~ Description: Internal use only.
 Func MemoryRead($aAddress, $aType = 'dword')
 	Local $lBuffer = DllStructCreate($aType)
@@ -219,15 +294,16 @@ EndFunc   ;==>SwapEndian
 ;~ Description: Returns a list of logged characters
 Func GetLoggedCharNames()
 	Local $array = ScanGW()
-	If $array[0] == 0 Then Return '' ; No characters logged
-	Local $ret = $array[1] ; Start with the first character name
-	For $i = 2 To $array[0] ; Concatenate remaining names, if any
-		$ret &= "|" & $array[$i]
+	If $array[0] == 1 Then Return $array[1]
+	If $array[0] < 1 Then Return ''
+	Local $ret = $array[1]
+	For $i = 2 To $array[0]
+		$ret &= "|"
+		$ret &= $array[$i]
 	Next
 	Return $ret
 EndFunc   ;==>GetLoggedCharNames
 
-;~ Description: Returns an array of logged characters of gw windows (at pos 0 there is the size of the array)
 Func ScanGW()
 	Local $lProcessList = ProcessList("gw.exe")
 	Local $lReturnArray[1] = [0]
@@ -257,237 +333,180 @@ Func GetHwnd($aProc)
 	Next
 EndFunc   ;==>GetHwnd
 
-;~ Description: Injects GWA² into the game client.
+;~ Description: Injects GWA� into the game client.
 Func Initialize($aGW, $bChangeTitle = True, $aUseStringLog = False, $aUseEventSystem = True)
-   ; Initialize variables
-   Local $lWinList, $lWinList2, $mGWProcessId
-   $mUseStringLog = $aUseStringLog
-   $mUseEventSystem = $aUseEventSystem
+	Local $lWinList, $lWinList2, $mGWProcessId
+	$mUseStringLog = $aUseStringLog
+	$mUseEventSystem = $aUseEventSystem
 
-   ; Check if $aGW is a string or a process ID
-   If IsString($aGW) Then
-      ; Find the process ID of the game client
-      Local $lProcessList = ProcessList("gw.exe")
-      For $i = 1 To $lProcessList[0][0]
-        $mGWProcessId = $lProcessList[$i][1]
-        $mGWWindowHandle = GetHwnd($mGWProcessId)
-        MemoryOpen($mGWProcessId)
-        If $mGWProcHandle Then
-           ; Check if the character name matches
-           If StringRegExp(ScanForCharname(), $aGW) = 1 Then
-              ExitLoop
-           EndIf
-        EndIf
-        MemoryClose()
-        $mGWProcHandle = 0
-      Next
-   Else
-      ; Use the provided process ID
-      $mGWProcessId = $aGW
-      $mGWWindowHandle = GetHwnd($mGWProcessId)
-      MemoryOpen($aGW)
-      ScanForCharname()
-   EndIf
+	If IsString($aGW) Then
+		Local $lProcessList = ProcessList("gw.exe")
+		For $i = 1 To $lProcessList[0][0]
+			$mGWProcessId = $lProcessList[$i][1]
+			$mGWWindowHandle = GetHwnd($mGWProcessId)
+			MemoryOpen($mGWProcessId)
+			If $mGWProcHandle Then
+				If StringRegExp(ScanForCharname(), $aGW) = 1 Then ExitLoop
+			EndIf
+			MemoryClose()
+			$mGWProcHandle = 0
+		Next
+	Else
+		$mGWProcessId = $aGW
+		$mGWWindowHandle = GetHwnd($mGWProcessId)
+		MemoryOpen($aGW)
+		ScanForCharname()
+	EndIf
 
-   Scan()
+	If $mGWProcHandle = 0 Then Return 0
 
-   ; Read Memory Values for Game Data
-   $mBasePointer = MemoryRead(GetScannedAddress('ScanBasePointer', 8))
-   SetValue('BasePointer', '0x' & Hex($mBasePointer, 8))
+	Scan()
 
-   $mAgentBase = MemoryRead(GetScannedAddress('ScanAgentBasePointer', 8) + 0xC - 7)
-   SetValue('AgentBase', '0x' & Hex($mAgentBase, 8))
+	Local $lTemp
+	$mBasePointer = MemoryRead(GetScannedAddress('ScanBasePointer', 8)) ;-3
+	SetValue('BasePointer', '0x' & Hex($mBasePointer, 8))
+	$mAgentBase = GetScannedAddress('ScanAgentBase', -15) + 0x1E
+	$mAgentBase = $mAgentBase + MemoryRead($mAgentBase) + 4
+	$mAgentBase += 0x13
+	$mAgentBase = MemoryRead($mAgentBase)
+	SetValue('AgentBase', '0x' & Hex($mAgentBase, 8))
+	$mMaxAgents = $mAgentBase + 8
+	SetValue('MaxAgents', '0x' & Hex($mMaxAgents, 8))
+	$mMyID = MemoryRead(GetScannedAddress('ScanMyID', -3));$mMyID = $mAgentBase - 84
+	SetValue('MyID', '0x' & Hex($mMyID, 8))
+	$mCurrentTarget = MemoryRead(GetScannedAddress('ScanCurrentTarget', -14)) ;$mAgentBase - 1280
+	SetValue('PacketLocation', '0x' & Hex(MemoryRead(GetScannedAddress('ScanBaseOffset', 11)), 8))
+	$mPing = MemoryRead(GetScannedAddress('ScanPing', -8))
+	$mMapID = MemoryRead(GetScannedAddress('ScanMapID', 28))
+	$mMapLoading = MemoryRead(GetScannedAddress('ScanMapLoading', 44))
+	$mLoggedIn = MemoryRead(GetScannedAddress('ScanLoggedIn', -3)) - 0x198
+	$mLanguage = MemoryRead(GetScannedAddress('ScanMapInfo', 11)) + 0xC
+	$mRegion = $mLanguage + 4
+	$mSkillBase = MemoryRead(GetScannedAddress('ScanSkillBase', 8))
+	$mSkillTimer = MemoryRead(GetScannedAddress('ScanSkillTimer', -3))
+	$lTemp = GetScannedAddress('ScanBuildNumber', 0x2C)
+	$mBuildNumber = MemoryRead($lTemp + MemoryRead($lTemp) + 5)
+	$mZoomStill = GetScannedAddress("ScanZoomStill", 0x33)
+	$mZoomMoving = GetScannedAddress("ScanZoomMoving", 0x21)
+	$mCurrentStatus = MemoryRead(GetScannedAddress('ScanChangeStatusFunction', 35))
 
-   $mMaxAgents = $mAgentBase + 8
-   SetValue('MaxAgents', '0x' & Hex($mMaxAgents, 8))
+	$lTemp = GetScannedAddress('ScanEngine', -0x6E) ;-16
+	SetValue('MainStart', '0x' & Hex($lTemp, 8))
+	SetValue('MainReturn', '0x' & Hex($lTemp + 5, 8))
+	$lTemp = GetScannedAddress('ScanRenderFunc', -0x67)
+    SetValue('RenderingMod', '0x' & Hex($lTemp, 8))
+    SetValue('RenderingModReturn', '0x' & Hex($lTemp + 10, 8))
+	$lTemp = GetScannedAddress('ScanTargetLog', 1)
+	SetValue('TargetLogStart', '0x' & Hex($lTemp, 8))
+	SetValue('TargetLogReturn', '0x' & Hex($lTemp + 5, 8))
+	$lTemp = GetScannedAddress('ScanSkillLog', 1)
+	SetValue('SkillLogStart', '0x' & Hex($lTemp, 8))
+	SetValue('SkillLogReturn', '0x' & Hex($lTemp + 5, 8))
+	$lTemp = GetScannedAddress('ScanSkillCompleteLog', -4)
+	SetValue('SkillCompleteLogStart', '0x' & Hex($lTemp, 8))
+	SetValue('SkillCompleteLogReturn', '0x' & Hex($lTemp + 5, 8))
+	$lTemp = GetScannedAddress('ScanSkillCancelLog', 5)
+	SetValue('SkillCancelLogStart', '0x' & Hex($lTemp, 8))
+	SetValue('SkillCancelLogReturn', '0x' & Hex($lTemp + 6, 8))
+	$lTemp = GetScannedAddress('ScanChatLog', 18)
+	SetValue('ChatLogStart', '0x' & Hex($lTemp, 8))
+	SetValue('ChatLogReturn', '0x' & Hex($lTemp + 6, 8))
+	$lTemp = GetScannedAddress('ScanTraderHook', -0x2F)
+	SetValue('TraderHookStart', '0x' & Hex($lTemp, 8))
+	SetValue('TraderHookReturn', '0x' & Hex($lTemp + 5, 8))
 
-   $mAgentArray = MemoryRead(GetScannedAddress('ScanAgentArray', -0x3))
+	$lTemp = GetScannedAddress('ScanDialogLog', -4)
+	SetValue('DialogLogStart', '0x' & Hex($lTemp, 8))
+	SetValue('DialogLogReturn', '0x' & Hex($lTemp + 5, 8))
+	$lTemp = GetScannedAddress('ScanStringFilter1', -5); was -0x23
+    SetValue('StringFilter1Start', '0x' & Hex($lTemp, 8))
+    SetValue('StringFilter1Return', '0x' & Hex($lTemp + 5, 8))
+    $lTemp = GetScannedAddress('ScanStringFilter2', 0x16); was 0x61
+    SetValue('StringFilter2Start', '0x' & Hex($lTemp, 8))
+    SetValue('StringFilter2Return', '0x' & Hex($lTemp + 5, 8))
+    SetValue('StringLogStart', '0x' & Hex(GetScannedAddress('ScanStringLog', 0x16), 8))
 
-;~    $mMyID = MemoryRead(GetScannedAddress('ScanMyID', -3))
-;~    SetValue('MyID', '0x' & Hex($mMyID, 8))
+	SetValue('LoadFinishedStart', '0x' & Hex(GetScannedAddress('ScanLoadFinished', 1), 8))
+	SetValue('LoadFinishedReturn', '0x' & Hex(GetScannedAddress('ScanLoadFinished', 6), 8))
 
-   $mCurrentTarget = MemoryRead(GetScannedAddress('ScanCurrentTarget', -14))
+	SetValue('PostMessage', '0x' & Hex(MemoryRead(GetScannedAddress('ScanPostMessage', 11)), 8))
+	SetValue('Sleep', MemoryRead(MemoryRead(GetValue('ScanSleep') + 8) + 3))
+	SetValue('SalvageFunction', MemoryRead(GetValue('ScanSalvageFunction') + 8) - 18)
+	SetValue('SalvageGlobal', MemoryRead(MemoryRead(GetValue('ScanSalvageGlobal') + 8) + 1))
+	SetValue('IncreaseAttributeFunction', '0x' & Hex(GetScannedAddress('ScanIncreaseAttributeFunction', -0x5A), 8))
+	SetValue("DecreaseAttributeFunction", "0x" & Hex(GetScannedAddress("ScanDecreaseAttributeFunction", 25), 8))
+	SetValue('MoveFunction', '0x' & Hex(GetScannedAddress('ScanMoveFunction', 1), 8))
+	SetValue('UseSkillFunction', '0x' & Hex(GetScannedAddress('ScanUseSkillFunction', -0x125), 8))
+	SetValue('ChangeTargetFunction', '0x' & Hex(GetScannedAddress('ScanChangeTargetFunction', -15), 8))
+	SetValue('WriteChatFunction', '0x' & Hex(GetScannedAddress('ScanWriteChatFunction', -0x3D), 8))
+	SetValue('SellItemFunction', '0x' & Hex(GetScannedAddress('ScanSellItemFunction', -85), 8))
+	SetValue('PacketSendFunction', '0x' & Hex(GetScannedAddress('ScanPacketSendFunction', -0xC2), 8))
+	SetValue('ActionBase', '0x' & Hex(MemoryRead(GetScannedAddress('ScanActionBase', -3)), 8))
+	SetValue('ActionFunction', '0x' & Hex(GetScannedAddress('ScanActionFunction', -3), 8))
+	SetValue('UseHeroSkillFunction', '0x' & Hex(GetScannedAddress('ScanUseHeroSkillFunction', -0xA1), 8))
+	SetValue('BuyItemBase', '0x' & Hex(MemoryRead(GetScannedAddress('ScanBuyItemBase', 15)), 8))
+	SetValue('TransactionFunction', '0x' & Hex(GetScannedAddress('ScanTransactionFunction', -0x7E), 8))
+	SetValue('RequestQuoteFunction', '0x' & Hex(GetScannedAddress('ScanRequestQuoteFunction', 0x3B), 8)) ;-2
+	SetValue('TraderFunction', '0x' & Hex(GetScannedAddress('ScanTraderFunction', -0x1E), 8))
+	SetValue('ClickToMoveFix', '0x' & Hex(GetScannedAddress("ScanClickToMoveFix", 1), 8))
+	SetValue('ChangeStatusFunction', '0x' & Hex(GetScannedAddress("ScanChangeStatusFunction", 1), 8))
 
-   $packetlocation = Hex(MemoryRead(GetScannedAddress('ScanBaseOffset', 11)), 8)
-   SetValue('PacketLocation', '0x' & $packetlocation)
+	SetValue('QueueSize', '0x00000010')
+	SetValue('SkillLogSize', '0x00000010')
+	SetValue('ChatLogSize', '0x00000010')
+	SetValue('TargetLogSize', '0x00000200')
+	SetValue('StringLogSize', '0x00000200')
+	SetValue('CallbackEvent', '0x00000501')
+	$MTradeHackAddress = GetScannedAddress("ScanTradeHack", 0)
 
-   $mPing = MemoryRead(GetScannedAddress('ScanPing', -0x14))
+	ModifyMemory()
 
-;~    $mMapID = MemoryRead(GetScannedAddress('ScanMapID', 28))
+	$mQueueCounter = MemoryRead(GetValue('QueueCounter'))
+	$mQueueSize = GetValue('QueueSize') - 1
+	$mQueueBase = GetValue('QueueBase')
+	$mTargetLogBase = GetValue('TargetLogBase')
+	$mStringLogBase = GetValue('StringLogBase')
+	$mMapIsLoaded = GetValue('MapIsLoaded')
+	$mEnsureEnglish = GetValue('EnsureEnglish')
+	$mTraderQuoteID = GetValue('TraderQuoteID')
+	$mTraderCostID = GetValue('TraderCostID')
+	$mTraderCostValue = GetValue('TraderCostValue')
+	$mDisableRendering = GetValue('DisableRendering')
+	$mAgentCopyCount = GetValue('AgentCopyCount')
+	$mAgentCopyBase = GetValue('AgentCopyBase')
+	$mLastDialogID = GetValue('LastDialogID')
 
-;~    $mMapLoading = MemoryRead(GetScannedAddress('ScanMapLoading', 0xB))
+	If $mUseEventSystem Then MemoryWrite(GetValue('CallbackHandle'), $mGUI)
 
-   $mLoggedIn = MemoryRead(GetScannedAddress('ScanLoggedIn', 0x3))
+	DllStructSetData($mInviteGuild, 1, GetValue('CommandPacketSend'))
+	DllStructSetData($mInviteGuild, 2, 0x4C)
+	DllStructSetData($mUseSkill, 1, GetValue('CommandUseSkill'))
+	DllStructSetData($mMove, 1, GetValue('CommandMove'))
+	DllStructSetData($mChangeTarget, 1, GetValue('CommandChangeTarget'))
+	DllStructSetData($mPacket, 1, GetValue('CommandPacketSend'))
+	DllStructSetData($mSellItem, 1, GetValue('CommandSellItem'))
+	DllStructSetData($mAction, 1, GetValue('CommandAction'))
+	DllStructSetData($mToggleLanguage, 1, GetValue('CommandToggleLanguage'))
 
-;~    $mLanguage = MemoryRead(GetScannedAddress('ScanMapInfo', 11)) + 0xC
-;~    $mRegion = $mLanguage + 4
-   $mRegion = MemoryRead(GetScannedAddress('ScanRegion', -0x3))
+	DllStructSetData($mUseHeroSkill, 1, GetValue('CommandUseHeroSkill'))
 
+	DllStructSetData($mBuyItem, 1, GetValue('CommandBuyItem'))
+	DllStructSetData($mSendChat, 1, GetValue('CommandSendChat'))
+	DllStructSetData($mSendChat, 2, $HEADER_SEND_CHAT)
+	DllStructSetData($mWriteChat, 1, GetValue('CommandWriteChat'))
+	DllStructSetData($mRequestQuote, 1, GetValue('CommandRequestQuote'))
+	DllStructSetData($mRequestQuoteSell, 1, GetValue('CommandRequestQuoteSell'))
+	DllStructSetData($mTraderBuy, 1, GetValue('CommandTraderBuy'))
+	DllStructSetData($mTraderSell, 1, GetValue('CommandTraderSell'))
+	DllStructSetData($mSalvage, 1, GetValue('CommandSalvage'))
+	DllStructSetData($mIncreaseAttribute, 1, GetValue('CommandIncreaseAttribute'))
+	DllStructSetData($mDecreaseAttribute, 1, GetValue('CommandDecreaseAttribute'))
+	DllStructSetData($mMakeAgentArray, 1, GetValue('CommandMakeAgentArray'))
+	DllStructSetData($mChangeStatus, 1, GetValue('CommandChangeStatus'))
 
-   $mSkillBase = MemoryRead(GetScannedAddress('ScanSkillBase', 8))
-   $mSkillTimer = MemoryRead(GetScannedAddress('ScanSkillTimer', -3))
-
-   $lTemp = GetScannedAddress('ScanBuildNumber', 0x2C)
-   $mBuildNumber = MemoryRead($lTemp + MemoryRead($lTemp) + 5)
-
-   $mZoomStill = GetScannedAddress("ScanZoomStill", 0x33)
-   $mZoomMoving = GetScannedAddress("ScanZoomMoving", 0x21)
-
-   $mCurrentStatus = MemoryRead(GetScannedAddress('ScanChangeStatusFunction', 35))
-   $mCharslots = MemoryRead(GetScannedAddress('ScanCharslots', 22))
-
-   $mInstanceInfo = MemoryRead(GetScannedAddress('ScanInstanceInfo', 0xE))
-   $mAreaInfo = MemoryRead(GetScannedAddress('ScanAreaInfo', 0x6))
-
-
-   $mAttributeInfo = MemoryRead(GetScannedAddress('ScanAttributeInfo', -0x3))
-
-   $mWorldConst = MemoryRead(GetScannedAddress('ScanWorldConst', 8))
-
-   $lTemp = GetScannedAddress('ScanEngine', -0x22)
-   SetValue('MainStart', '0x' & Hex($lTemp, 8))
-   SetValue('MainReturn', '0x' & Hex($lTemp + 5, 8))
-
-   $lTemp = GetScannedAddress('ScanRenderFunc', -0x67)
-   	SetValue('RenderingMod', '0x' & Hex($lTemp, 8))
-	SetValue('RenderingModReturn', '0x' & Hex($lTemp + 10, 8))
-
-   $lTemp = GetScannedAddress('ScanTargetLog', 1)
-   SetValue('TargetLogStart', '0x' & Hex($lTemp, 8))
-   SetValue('TargetLogReturn', '0x' & Hex($lTemp + 5, 8))
-
-   $lTemp = GetScannedAddress('ScanSkillLog', 1)
-   SetValue('SkillLogStart', '0x' & Hex($lTemp, 8))
-   SetValue('SkillLogReturn', '0x' & Hex($lTemp + 5, 8))
-
-   $lTemp = GetScannedAddress('ScanSkillCompleteLog', -4)
-   SetValue('SkillCompleteLogStart', '0x' & Hex($lTemp, 8))
-   SetValue('SkillCompleteLogReturn', '0x' & Hex($lTemp + 5, 8))
-
-   $lTemp = GetScannedAddress('ScanSkillCancelLog', 5)
-   SetValue('SkillCancelLogStart', '0x' & Hex($lTemp, 8))
-   SetValue('SkillCancelLogReturn', '0x' & Hex($lTemp + 6, 8))
-
-   $lTemp = GetScannedAddress('ScanChatLog', 18)
-   SetValue('ChatLogStart', '0x' & Hex($lTemp, 8))
-   SetValue('ChatLogReturn', '0x' & Hex($lTemp + 6, 8))
-
-   $lTemp = GetScannedAddress('ScanTraderHook', -0x2F)
-   SetValue('TraderHookStart', '0x' & Hex($lTemp, 8))
-   SetValue('TraderHookReturn', '0x' & Hex($lTemp + 5, 8))
-
-   $lTemp = GetScannedAddress('ScanDialogLog', -4)
-   SetValue('DialogLogStart', '0x' & Hex($lTemp, 8))
-   SetValue('DialogLogReturn', '0x' & Hex($lTemp + 5, 8))
-
-   $lTemp = GetScannedAddress('ScanStringFilter1', -5)
-   SetValue('StringFilter1Start', '0x' & Hex($lTemp, 8))
-   SetValue('StringFilter1Return', '0x' & Hex($lTemp + 5, 8))
-
-   $lTemp = GetScannedAddress('ScanStringFilter2', 0x16)
-   SetValue('StringFilter2Start', '0x' & Hex($lTemp, 8))
-   SetValue('StringFilter2Return', '0x' & Hex($lTemp + 5, 8))
-
-   SetValue('StringLogStart', '0x' & Hex(GetScannedAddress('ScanStringLog', 0x16), 8))
-
-   SetValue('LoadFinishedStart', '0x' & Hex(GetScannedAddress('ScanLoadFinished', 1), 8))
-   SetValue('LoadFinishedReturn', '0x' & Hex(GetScannedAddress('ScanLoadFinished', 6), 8))
-
-   SetValue('PostMessage', '0x' & Hex(MemoryRead(GetScannedAddress('ScanPostMessage', 11)), 8))
-   SetValue('Sleep', MemoryRead(MemoryRead(GetValue('ScanSleep') + 8) + 3))
-
-   SetValue('SalvageFunction', '0x' & Hex(GetScannedAddress('ScanSalvageFunction', -10), 8))
-   SetValue('SalvageGlobal', '0x' & Hex(MemoryRead(GetScannedAddress('ScanSalvageGlobal', 1) - 0x4), 8))
-
-   SetValue('IncreaseAttributeFunction', '0x' & Hex(GetScannedAddress('ScanIncreaseAttributeFunction', -0x5A), 8))
-   SetValue("DecreaseAttributeFunction", "0x" & Hex(GetScannedAddress("ScanDecreaseAttributeFunction", 25), 8))
-
-   SetValue('MoveFunction', '0x' & Hex(GetScannedAddress('ScanMoveFunction', 1), 8))
-   SetValue('UseSkillFunction', '0x' & Hex(GetScannedAddress('ScanUseSkillFunction', -0x125), 8))
-
-  ;SetValue('ChangeTargetFunction', '0x' & Hex(GetScannedAddress('ScanChangeTargetFunction', -0x0089) + 1, 8))
-   SetValue('ChangeTargetFunction', '0x' & Hex(GetScannedAddress('ScanChangeTargetFunction', -0x0086) + 1, 8))
-   SetValue('WriteChatFunction', '0x' & Hex(GetScannedAddress('ScanWriteChatFunction', -0x3D), 8))
-
-   SetValue('SellItemFunction', '0x' & Hex(GetScannedAddress('ScanSellItemFunction', -85), 8))
-   SetValue('PacketSendFunction', '0x' & Hex(GetScannedAddress('ScanPacketSendFunction', -0x50), 8))
-
-   SetValue('ActionBase', '0x' & Hex(MemoryRead(GetScannedAddress('ScanActionBase', -3)), 8))
-   SetValue('ActionFunction', '0x' & Hex(GetScannedAddress('ScanActionFunction', -3), 8))
-
-   SetValue('UseHeroSkillFunction', '0x' & Hex(GetScannedAddress('ScanUseHeroSkillFunction', -0x59), 8))
-
-   SetValue('BuyItemBase', '0x' & Hex(MemoryRead(GetScannedAddress('ScanBuyItemBase', 15)), 8))
-
-   SetValue('TransactionFunction', '0x' & Hex(GetScannedAddress('ScanTransactionFunction', -0x7E), 8))
-   SetValue('RequestQuoteFunction', '0x' & Hex(GetScannedAddress('ScanRequestQuoteFunction', -0x34), 8))
-
-   SetValue('TraderFunction', '0x' & Hex(GetScannedAddress('ScanTraderFunction', -0x1E), 8))
-   SetValue('ClickToMoveFix', '0x' & Hex(GetScannedAddress("ScanClickToMoveFix", 1), 8))
-
-   SetValue('ChangeStatusFunction', '0x' & Hex(GetScannedAddress("ScanChangeStatusFunction", 1), 8))
-
-   SetValue('QueueSize', '0x00000010')
-   SetValue('SkillLogSize', '0x00000010')
-   SetValue('ChatLogSize', '0x00000010')
-   SetValue('TargetLogSize', '0x00000200')
-   SetValue('StringLogSize', '0x00000200')
-   SetValue('CallbackEvent', '0x00000501')
-   $MTradeHackAddress = GetScannedAddress("ScanTradeHack", 0)
-
-   ModifyMemory()
-
-   $mQueueCounter = MemoryRead(GetValue('QueueCounter'))
-   $mQueueSize = GetValue('QueueSize') - 1
-   $mQueueBase = GetValue('QueueBase')
-   $mTargetLogBase = GetValue('TargetLogBase')
-   $mStringLogBase = GetValue('StringLogBase')
-   $mMapIsLoaded = GetValue('MapIsLoaded')
-   $mEnsureEnglish = GetValue('EnsureEnglish')
-   $mTraderQuoteID = GetValue('TraderQuoteID')
-   $mTraderCostID = GetValue('TraderCostID')
-   $mTraderCostValue = GetValue('TraderCostValue')
-   $mDisableRendering = GetValue('DisableRendering')
-   $mAgentCopyCount = GetValue('AgentCopyCount')
-   $mAgentCopyBase = GetValue('AgentCopyBase')
-   $mLastDialogID = GetValue('LastDialogID')
-
-   If $mUseEventSystem Then
-      MemoryWrite(GetValue('CallbackHandle'), $mGUI)
-   EndIf
-
-   DllStructSetData($mInviteGuild, 1, GetValue('CommandPacketSend'))
-   DllStructSetData($mInviteGuild, 2, 0x4C)
-   DllStructSetData($mUseSkill, 1, GetValue('CommandUseSkill'))
-   DllStructSetData($mMove, 1, GetValue('CommandMove'))
-   DllStructSetData($mChangeTarget, 1, GetValue('CommandChangeTarget'))
-   DllStructSetData($mPacket, 1, GetValue('CommandPacketSend'))
-   DllStructSetData($mSellItem, 1, GetValue('CommandSellItem'))
-   DllStructSetData($mAction, 1, GetValue('CommandAction'))
-   DllStructSetData($mToggleLanguage, 1, GetValue('CommandToggleLanguage'))
-   DllStructSetData($mUseHeroSkill, 1, GetValue('CommandUseHeroSkill'))
-   DllStructSetData($mBuyItem, 1, GetValue('CommandBuyItem'))
-   DllStructSetData($mSendChat, 1, GetValue('CommandSendChat'))
-   DllStructSetData($mSendChat, 2, $HEADER_SEND_CHAT_MESSAGE)
-   DllStructSetData($mWriteChat, 1, GetValue('CommandWriteChat'))
-   DllStructSetData($mRequestQuote, 1, GetValue('CommandRequestQuote'))
-   DllStructSetData($mRequestQuoteSell, 1, GetValue('CommandRequestQuoteSell'))
-   DllStructSetData($mTraderBuy, 1, GetValue('CommandTraderBuy'))
-   DllStructSetData($mTraderSell, 1, GetValue('CommandTraderSell'))
-   DllStructSetData($mSalvage, 1, GetValue('CommandSalvage'))
-   DllStructSetData($mIncreaseAttribute, 1, GetValue('CommandIncreaseAttribute'))
-   DllStructSetData($mDecreaseAttribute, 1, GetValue('CommandDecreaseAttribute'))
-   DllStructSetData($mMakeAgentArray, 1, GetValue('CommandMakeAgentArray'))
-   DllStructSetData($mChangeStatus, 1, GetValue('CommandChangeStatus'))
-
-   If $bChangeTitle Then
-      WinSetTitle($mGWWindowHandle, '', 'Guild Wars - ' & GetCharname())
-   EndIf
-   SetMaxMemory()
-
-   Return $mGWWindowHandle
-EndFunc  ;==>Initialize
-
+	If $bChangeTitle Then WinSetTitle($mGWWindowHandle, '', 'Guild Wars - ' & GetCharname())
+	Return $mGWWindowHandle
+EndFunc   ;==>Initialize
 
 ;~ Description: Internal use only.
 Func GetValue($aKey)
@@ -506,7 +525,6 @@ Func SetValue($aKey, $aValue)
 EndFunc   ;==>SetValue
 
 ;~ Description: Internal use only.
-;~ Description: Scan patterns for Guild Wars game client.
 Func Scan()
 	Local $lGwBase = ScanForProcess()
 	$mASMSize = 0
@@ -514,320 +532,195 @@ Func Scan()
 	$mASMString = ''
 
 	_('MainModPtr/4')
-
-	; Scan patterns
 	_('ScanBasePointer:')
-	AddPattern('506A0F6A00FF35') ;85C0750F8BCE CHECKED ; STILL UPDATED 23.12.24
-
-	_('ScanAgentBase:') ; Still in use? (16/06-2023)
-	;AddPattern('FF50104783C6043BFB75E1') ; Still in use? (16/06-2023)
-	AddPattern('FF501083C6043BF775E2') ; UPDATED 23.12.24
-
-	_('ScanAgentBasePointer:')
-	AddPattern('FF501083C6043BF775E28B35') ;UPDATED 26.12.24
-
-	_('ScanAgentArray:')
-	AddPattern('8B0C9085C97419')
-
+	AddPattern('506A0F6A00FF35') ;85C0750F8BCE
+	_('ScanAgentBase:')
+	AddPattern('538B5D0C568B750885') ;568BF13BF07204
 	_('ScanCurrentTarget:')
-	AddPattern('83C4085F8BE55DC3CCCCCCCCCCCCCCCCCCCCCC55') ;UPDATED 23.12.24
-
-;~ 	_('ScanMyID:')
-;~ 	AddPattern('83EC08568BF13B15') ; STILL WORKING 23.12.24
-
+	AddPattern('83C4085B8BE55DC355')
+	_('ScanMyID:')
+	AddPattern('83EC08568BF13B15')
 	_('ScanEngine:')
-	AddPattern('568B3085F67478EB038D4900D9460C') ; UPDATED 23.12.24 NEEDS TO GET UPDATED EACH PATCH
-
+	AddPattern('56FFD083C4048B4E0485C9') ;old 5356DFE0F6C441
 	_('ScanRenderFunc:')
-	AddPattern('F6C401741C68B1010000BA') ; STILL WORKING 23.12.24
-
+    AddPattern('F6C401741C68B1010000BA')
 	_('ScanLoadFinished:')
-	AddPattern('8B561C8BCF52E8') ; COULD NOT UPDATE! 23.12.24
-
+	AddPattern('8B561C8BCF52E8')
 	_('ScanPostMessage:')
-	AddPattern('6A00680080000051FF15') ; COULD NOT UPDATE! 23.12.24
-
+	AddPattern('6A00680080000051FF15')
 	_('ScanTargetLog:')
-	AddPattern('5356578BFA894DF4E8') ; COULD NOT UPDATE! 23.12.24
-
+	AddPattern('5356578BFA894DF4E8')
 	_('ScanChangeTargetFunction:')
-	AddPattern('3BDF0F95') ; STILL WORKING 23.12.24, 33C03BDA0F95C033
-
+	AddPattern('538B5D0C568B750885') ;33C03BDA0F95C033
 	_('ScanMoveFunction:')
-	AddPattern('558BEC83EC208D45F0') ; STILL WORKING 23.12.24, 558BEC83EC2056578BF98D4DF0
-
+	AddPattern('558BEC83EC208D45F0') ;558BEC83EC2056578BF98D4DF0
 	_('ScanPing:')
-	AddPattern('E874651600') ; UPDATED 23.12.24
-
-;~ 	_('ScanMapID:')
-;~ 	AddPattern('558BEC8B450885C074078B') ;STILL WORKING 23.12.24, B07F8D55
-
-;~ 	_('ScanMapLoading:')
-;~ 	AddPattern('2480ED0000000000') ; UPDATED 25.12.24, 6A2C50E8
-
+	AddPattern('908D41248B49186A30')
+	_('ScanMapID:')
+	AddPattern('558BEC8B450885C074078B') ;B07F8D55
+	_('ScanMapLoading:')
+	AddPattern('6A2C50E8')
 	_('ScanLoggedIn:')
-	AddPattern('C705ACDE740000000000C3CCCCCCCC') ; UPDATED 26.12.24, NEED TO GET UPDATED EACH PATCH OLD:BFFFC70580 85C07411B807
-
-	_('ScanRegion:')
-	AddPattern('6A548D46248908') ; STILL WORKING 23.12.24
-
-;~ 	_('ScanMapInfo:')
-;~ 	AddPattern('8BF0EB038B750C3B') ; STILL WORKING 23.12.24, 83F9FD7406
-
-;~ 	_('ScanLanguage:')
-;~ 	AddPattern('C38B75FC8B04B5') ; COULD NOT UPDATE! 23.12.24
-
+	AddPattern('85C07411B807')
+	_('ScanMapInfo:')
+	AddPattern('8BF0EB038B750C3B') ;83F9FD7406
 	_('ScanUseSkillFunction:')
-	AddPattern('85F6745B83FE1174') ; STILL WORKING 23.12.24, 558BEC83EC1053568BD9578BF2895DF0
-
+	AddPattern('85F6745B83FE1174') ;558BEC83EC1053568BD9578BF2895DF0
 	_('ScanPacketSendFunction:')
-	AddPattern('C747540000000081E6') ;UPDATED 28.12.24 old: F7D9C74754010000001BC981, 558BEC83EC2C5356578BF985
-
+	AddPattern('F7D9C74754010000001BC981') ;558BEC83EC2C5356578BF985
 	_('ScanBaseOffset:')
-	AddPattern('83C40433C08BE55DC3A1') ; STILL WORKING 23.12.24, 5633F63BCE740E5633D2
-
+	AddPattern('83C40433C08BE55DC3A1') ;5633F63BCE740E5633D2
 	_('ScanWriteChatFunction:')
-	AddPattern('8D85E0FEFFFF50681C01') ;STILL WORKING 23.12.24, 558BEC5153894DFC8B4D0856578B
-
+	AddPattern('8D85E0FEFFFF50681C01') ;558BEC5153894DFC8B4D0856578B
 	_('ScanSkillLog:')
-	AddPattern('408946105E5B5D') ; COULD NOT UPDATE! 23.12.24
-
+	AddPattern('408946105E5B5D')
 	_('ScanSkillCompleteLog:')
-	AddPattern('741D6A006A40') ; COULD NOT UPDATE! 23.12.24
-
+	AddPattern('741D6A006A40')
 	_('ScanSkillCancelLog:')
-	AddPattern('741D6A006A48') ; COULD NOT UPDATE! 23.12.24
-
+	AddPattern('741D6A006A48')
 	_('ScanChatLog:')
-	AddPattern('8B45F48B138B4DEC50') ; COULD NOT UPDATE! 23.12.24
-
+	AddPattern('8B45F48B138B4DEC50')
 	_('ScanSellItemFunction:')
-	AddPattern('8B4D2085C90F858E') ; COULD NOT UPDATE! 23.12.24
-
+	AddPattern('8B4D2085C90F858E')
 	_('ScanStringLog:')
-	AddPattern('893E8B7D10895E04397E08') ; COULD NOT UPDATE! 23.12.24
-
-	_('ScanStringFilter1:')
-	AddPattern('8B368B4F2C6A006A008B06') ; COULD NOT UPDATE! 23.12.24
-
-	_('ScanStringFilter2:')
-	AddPattern('515356578BF933D28B4F2C') ; COULD NOT UPDATE! 23.12.24
-
+    AddPattern('893E8B7D10895E04397E08')
+    _('ScanStringFilter1:')
+    AddPattern('8B368B4F2C6A006A008B06')
+    _('ScanStringFilter2:')
+    AddPattern('515356578BF933D28B4F2C')
 	_('ScanActionFunction:')
-	AddPattern('8B7508578BF983FE09750C6876') ;STILL WORKING 23.12.24, ;8B7D0883FF098BF175116876010000
-
+	AddPattern('8B7508578BF983FE09750C6876') ;8B7D0883FF098BF175116876010000
 	_('ScanActionBase:')
-	AddPattern('8D1C87899DF4') ; UPDATED 24.12.24, OLD: 8D1C87899DF4FEFFFF8BC32BC7C1F802, 8B4208A80175418B4A08
-
+	AddPattern('8D1C87899DF4FEFFFF8BC32BC7C1F802') ;8B4208A80175418B4A08
 	_('ScanSkillBase:')
-	AddPattern('8D04B6C1E00505') ;STILL WORKING 23.12.24 ;8D 04 B6 C1 E0 05 05
-
+	AddPattern('8D04B6C1E00505')
 	_('ScanUseHeroSkillFunction:')
-	AddPattern('BA02000000B954080000') ;STILL WORKING 23.12.24
-
+	AddPattern('8D0C765F5E8B')
 	_('ScanTransactionFunction:')
-	AddPattern('85FF741D8B4D14EB08') ;STILL WORKING 23.12.24 ;558BEC81ECC000000053568B75085783FE108BFA8BD97614
-
-	_('ScanBuyItemFunction:') ; Still in use? (16/06-2023)
-	AddPattern('D9EED9580CC74004') ;STILL WORKING 23.12.24 ; Still in use? (16/06-2023)
-
+	AddPattern('85FF741D8B4D14EB08') ;558BEC81ECC000000053568B75085783FE108BFA8BD97614
 	_('ScanBuyItemBase:')
-	AddPattern('D9EED9580CC74004') ;STILL WORKING 23.12.24
-
+	AddPattern('D9EED9580CC74004')
 	_('ScanRequestQuoteFunction:')
-	AddPattern('8B752083FE107614')  ;STILL WORKING 23.12.24;8B750C5783FE107614 ;53568B750C5783FE10
-
+	AddPattern('83C4245B8BE55D') ;53568B750C5783FE10
 	_('ScanTraderFunction:')
-	;AddPattern('8B45188B551085') ;83FF10761468
-	AddPattern('83FF10761468D2210000') ;STILL WORKING 23.12.24
-
+	AddPattern('83FF10761468AC210000')
 	_('ScanTraderHook:')
-	AddPattern('50516A466A06')
-
+	AddPattern('50516A466A06') ;007BA579
 	_('ScanSleep:')
-	AddPattern('6A0057FF15D8408A006860EA0000') ; UPDATED 24.12.24, OLD:5F5E5B741A6860EA0000
-
+	AddPattern('5F5E5B741A6860EA0000')
 	_('ScanSalvageFunction:')
-	AddPattern('33C58945FC8B45088945F08B450C8945F48B45108945F88D45EC506A10C745EC76') ; UPDATED 24.12.24 OLD:33C58945FC8B45088945F08B450C8945F48B45108945F88D45EC506A10C745EC75
-	;AddPattern('8BFA8BD9897DF0895DF4')
-
+	AddPattern('8BFA8BD9897DF0895DF4')
 	_('ScanSalvageGlobal:')
-	AddPattern('8B4A04538945F48B4208') ; UPDATED 24.12.24, OLD: 8B5104538945F48B4108568945E88B410C578945EC8B4110528955E48945F0
-	;AddPattern('8B018B4904A3')
-
+	AddPattern('8B018B4904A3')
 	_('ScanIncreaseAttributeFunction:')
-	AddPattern('8B7D088B702C8B1F3B9E00050000') ;STILL WORKING 23.12.24, 8B702C8B3B8B86
-
+	AddPattern('8B7D088B702C8B1F3B9E00050000') ;8B702C8B3B8B86
 	_("ScanDecreaseAttributeFunction:")
-	AddPattern("8B8AA800000089480C5DC3CC") ;STILL WORKING 23.12.24, 8B402C8BCE059C0000008B1089118B50
-
+	AddPattern("8B8AA800000089480C5DC3CC") ;8B402C8BCE059C0000008B1089118B50
 	_('ScanSkillTimer:')
-	AddPattern('FFD68B4DF08BD88B4708') ;STILL WORKING 23.12.24, 85c974158bd62bd183fa64
-
+	AddPattern('FFD68B4DF08BD88B4708') ;85c974158bd62bd183fa64
 	_('ScanClickToMoveFix:')
-	AddPattern('3DD301000074') ;STILL WORKING 23.12.24,
-
+	AddPattern('3DD301000074')
 	_('ScanZoomStill:')
-	AddPattern('558BEC8B41085685C0') ; COULD NOT UPDATE! 23.12.24
-
+	AddPattern('558BEC8B41085685C0')
 	_('ScanZoomMoving:')
-	AddPattern('EB358B4304') ; COULD NOT UPDATE! 23.12.24
-
+	AddPattern('EB358B4304')
 	_('ScanBuildNumber:')
-	AddPattern('558BEC83EC4053568BD9') ; COULD NOT UPDATE! 23.12.24
-
+	AddPattern('558BEC83EC4053568BD9')
 	_('ScanChangeStatusFunction:')
-	AddPattern('558BEC568B750883FE047C14') ;STILL WORKING 23.12.24, 568BF183FE047C14682F020000
-
-	_('ScanCharslots:')
-	AddPattern('8B551041897E38897E3C897E34897E48897E4C890D') ; COULD NOT UPDATE! 23.12.24
-
+	AddPattern('558BEC568B750883FE047C14') ;568BF183FE047C14682F020000
 	_('ScanReadChatFunction:')
-	AddPattern('A128B6EB00') ; COULD NOT UPDATE! 23.12.24
-
+	AddPattern('A128B6EB00')
 	_('ScanDialogLog:')
-	AddPattern('8B45088945FC8D45F8506A08C745F841') ;STILL WORKING 23.12.24, 558BEC83EC285356578BF28BD9
-
+	AddPattern('8B45088945FC8D45F8506A08C745F841');558BEC83EC285356578BF28BD9
 	_("ScanTradeHack:")
-	AddPattern("8BEC8B450883F846") ;STILL WORKING 23.12.24
-
+	AddPattern("8BEC8B450883F846")
 	_("ScanClickCoords:")
-	AddPattern("8B451C85C0741CD945F8") ;STILL WORKING 23.12.24
+	AddPattern("8B451C85C0741CD945F8")
+	_('ScanProc:')
+	_('pushad')
+	_('mov ecx,' & Hex($lGwBase, 8)) ;401000
+	_('mov esi,ScanProc')
+	_('ScanLoop:')
+	_('inc ecx')
+	_('mov al,byte[ecx]')
+	_('mov edx,ScanBasePointer')
 
-	_("ScanInstanceInfo:")
-	AddPattern("6A2C50E80000000083C408C7") ;Added by Greg76 to get Instance Info
+	_('ScanInnerLoop:')
+	_('mov ebx,dword[edx]')
+	_('cmp ebx,-1')
+	_('jnz ScanContinue')
+	_('add edx,50')
+	_('cmp edx,esi')
+	_('jnz ScanInnerLoop')
+	_('cmp ecx,' & SwapEndian(Hex($lGwBase + 5238784, 8))) ;+4FF000
+	_('jnz ScanLoop')
+	_('jmp ScanExit')
 
-	_("ScanAreaInfo:")
-	AddPattern("6BC67C5E05") ;Added by Greg76 to get Area Info
+	_('ScanContinue:')
+	_('lea edi,dword[edx+ebx]')
+	_('add edi,C')
+	_('mov ah,byte[edi]')
+	_('cmp al,ah')
+	_('jz ScanMatched')
+	_('mov dword[edx],0')
+	_('add edx,50')
+	_('cmp edx,esi')
+	_('jnz ScanInnerLoop')
+	_('cmp ecx,' & SwapEndian(Hex($lGwBase + 5238784, 8)))
+	_('jnz ScanLoop')
+	_('jmp ScanExit')
 
-	_("ScanAttributeInfo:")
-	AddPattern("BA3300000089088d4004") ;Added by Greg76 to get Attribute Info
+	_('ScanMatched:')
+	_('inc ebx')
+	_('mov edi,dword[edx+4]')
+	_('cmp ebx,edi')
+	_('jz ScanFound')
+	_('mov dword[edx],ebx')
+	_('add edx,50')
+	_('cmp edx,esi')
+	_('jnz ScanInnerLoop')
+	_('cmp ecx,' & SwapEndian(Hex($lGwBase + 5238784, 8)))
+	_('jnz ScanLoop')
+	_('jmp ScanExit')
 
-	_("ScanWorldConst:")
-	AddPattern("8D0476C1E00405") ;Added by Greg76 to get World Info
+	_('ScanFound:')
+	_('lea edi,dword[edx+8]')
+	_('mov dword[edi],ecx')
+	_('mov dword[edx],-1')
+	_('add edx,50')
+	_('cmp edx,esi')
+	_('jnz ScanInnerLoop')
+	_('cmp ecx,' & SwapEndian(Hex($lGwBase + 5238784, 8)))
+	_('jnz ScanLoop')
 
-	_('ScanProc:') ; Label for the scan procedure
-	_('pushad') ; Push all general-purpose registers onto the stack to save their values
-	_('mov ecx,' & Hex($lGwBase, 8)) ; Move the base address of the Guild Wars process into the ECX register
-	_('mov esi,ScanProc') ; Move the address of the ScanProc label into the ESI register
-	_('ScanLoop:') ; Label for the scan loop
-	_('inc ecx') ; Increment the value in the ECX register by 1
-	_('mov al,byte[ecx]') ; Move the byte value at the address stored in ECX into the AL register
-	_('mov edx,ScanBasePointer') ; Move the address of the ScanBasePointer into the EDX register
-
-
-	_('ScanInnerLoop:') ; Label for the inner scan loop
-	_('mov ebx,dword[edx]') ; Move the 4-byte value at the address stored in EDX into the EBX register
-	_('cmp ebx,-1') ; Compare the value in EBX to -1
-	_('jnz ScanContinue') ; Jump to the ScanContinue label if the comparison is not zero
-	_('add edx,50') ; Add 50 to the value in the EDX register
-	_('cmp edx,esi') ; Compare the value in EDX to the value in ESI
-	_('jnz ScanInnerLoop') ; Jump to the ScanInnerLoop label if the comparison is not zero
-	_('cmp ecx,' & SwapEndian(Hex($lGwBase + 5238784, 8))) ; Compare the value in ECX to a specific address (+4FF000)
-	_('jnz ScanLoop') ; Jump to the ScanLoop label if the comparison is not zero
-	_('jmp ScanExit') ; Jump to the ScanExit label
-
-
-	_('ScanContinue:') ; Label for the scan continue section
-	_('lea edi,dword[edx+ebx]') ; Load the effective address of the value at EDX + EBX into the EDI register
-	_('add edi,C') ; Add the value of C to the address in EDI
-	_('mov ah,byte[edi]') ; Move the byte value at the address stored in EDI into the AH register
-	_('cmp al,ah') ; Compare the value in AL to the value in AH
-	_('jz ScanMatched') ; Jump to the ScanMatched label if the comparison is zero (i.e., the values match)
-	_('cmp ah,00')    ;Added by Greg76 for scan wildcards
-	_('jz ScanMatched')    ;Added by Greg76 for scan wildcards
-	_('mov dword[edx],0') ; Move the value 0 into the 4-byte location at the address stored in EDX
-	_('add edx,50') ; Add 50 to the value in the EDX register
-	_('cmp edx,esi') ; Compare the value in EDX to the value in ESI
-	_('jnz ScanInnerLoop') ; Jump to the ScanInnerLoop label if the comparison is not zero
-	_('cmp ecx,' & SwapEndian(Hex($lGwBase + 5238784, 8))) ; Compare the value in ECX to a specific address (+4FF000)
-	_('jnz ScanLoop') ; Jump to the ScanLoop label if the comparison is not zero
-	_('jmp ScanExit') ; Jump to the ScanExit label
-
-
-	_('ScanMatched:') ; Label for the scan matched section
-	_('inc ebx') ; Increment the value in the EBX register by 1
-	_('mov edi,dword[edx+4]') ; Move the 4-byte value at the address EDX + 4 into the EDI register
-	_('cmp ebx,edi') ; Compare the value in EBX to the value in EDI
-	_('jz ScanFound') ; Jump to the ScanFound label if the comparison is zero (i.e., the values match)
-	_('mov dword[edx],ebx') ; Move the value in EBX into the 4-byte location at the address stored in EDX
-	_('add edx,50') ; Add 50 to the value in the EDX register
-	_('cmp edx,esi') ; Compare the value in EDX to the value in ESI
-	_('jnz ScanInnerLoop') ; Jump to the ScanInnerLoop label if the comparison is not zero
-	_('cmp ecx,' & SwapEndian(Hex($lGwBase + 5238784, 8))) ; Compare the value in ECX to a specific address (+4FF000)
-	_('jnz ScanLoop') ; Jump to the ScanLoop label if the comparison is not zero
-	_('jmp ScanExit') ; Jump to the ScanExit label
-
-
-	_('ScanFound:') ; Label for the scan found section
-	_('lea edi,dword[edx+8]') ; Load the effective address of the value at EDX + 8 into the EDI register
-	_('mov dword[edi],ecx') ; Move the value in ECX into the 4-byte location at the address stored in EDI
-	_('mov dword[edx],-1') ; Move the value -1 into the 4-byte location at the address stored in EDX (mark as found)
-	_('add edx,50') ; Add 50 to the value in the EDX register
-	_('cmp edx,esi') ; Compare the value in EDX to the value in ESI
-	_('jnz ScanInnerLoop') ; Jump to the ScanInnerLoop label if the comparison is not zero
-	_('cmp ecx,' & SwapEndian(Hex($lGwBase + 5238784, 8))) ; Compare the value in ECX to a specific address (+4FF000)
-	_('jnz ScanLoop') ; Jump to the ScanLoop label if the comparison is not zero
-
-	_('ScanExit:') ; Label for the scan exit section
-	_('popad') ; Pop all general-purpose registers from the stack to restore their original values
-	_('retn') ; Return from the current function (exit the scan routine)
-
+	_('ScanExit:')
+	_('popad')
+	_('retn')
 
 	$mBase = $lGwBase + 0x9DF000
 	Local $lScanMemory = MemoryRead($mBase, 'ptr')
-
-	; Check if the scan memory address is empty (no previous injection)
 	If $lScanMemory = 0 Then
-		; Allocate a new block of memory for the scan routine
 		$mMemory = DllCall($mKernelHandle, 'ptr', 'VirtualAllocEx', 'handle', $mGWProcHandle, 'ptr', 0, 'ulong_ptr', $mASMSize, 'dword', 0x1000, 'dword', 0x40)
-		$mMemory = $mMemory[0] ; Get the allocated memory address
-
-		; Write the allocated memory address to the scan memory location
+		$mMemory = $mMemory[0]
 		MemoryWrite($mBase, $mMemory)
-
-;~ out("First Inject: " & $mMemory)
+;~ 		out("First Inject: " & $mMemory)
 	Else
-		; If the scan memory address is not empty, use the existing memory address
 		$mMemory = $lScanMemory
 	EndIf
 
-
-	; Complete the assembly code for the scan routine
 	CompleteASMCode()
 
-	; Check if this is the first injection (no previous scan memory address)
 	If $lScanMemory = 0 Then
-		; Write the assembly code to the allocated memory address
 		WriteBinary($mASMString, $mMemory + $mASMCodeOffset)
-
-		; Create a new thread in the target process to execute the scan routine
 		Local $lThread = DllCall($mKernelHandle, 'int', 'CreateRemoteThread', 'int', $mGWProcHandle, 'ptr', 0, 'int', 0, 'int', GetLabelInfo('ScanProc'), 'ptr', 0, 'int', 0, 'int', 0)
-		$lThread = $lThread[0] ; Get the thread ID
-
-		; Wait for the thread to finish executing
+		$lThread = $lThread[0]
 		Local $lResult
 		Do
-			; Wait for up to 50ms for the thread to finish
 			$lResult = DllCall($mKernelHandle, 'int', 'WaitForSingleObject', 'int', $lThread, 'int', 50)
-		Until $lResult[0] <> 258 ; Wait until the thread is no longer waiting (258 is the WAIT_TIMEOUT constant)
-
-		; Close the thread handle to free up system resources
+		Until $lResult[0] <> 258
 		DllCall($mKernelHandle, 'int', 'CloseHandle', 'int', $lThread)
 	EndIf
 EndFunc   ;==>Scan
-
-; **Function to Retrieve Guild Wars Process Base Address**
-Func GetGWBase()
-	; **Scan for Guild Wars Process and Get Base Address**
-	Local $lGwBase = ScanForProcess() - 4096 ; Subtract 4096 from the process address to get the base address
-
-	; **Convert Base Address to Hexadecimal String**
-	$lGwBase = "0x" & Hex($lGwBase) ; Prefix the hexadecimal value with "0x"
-
-	; **Return Base Address as Hexadecimal String**
-	Return $lGwBase
-EndFunc   ;==>GetGWBase
 
 Func ScanForProcess()
 	Local $lCharNameCode = BinaryToString('0x558BEC83EC105356578B7D0833F63BFE')
@@ -859,21 +752,15 @@ Func ScanForProcess()
 EndFunc   ;==>ScanForProcess
 
 ;~ Description: Internal use only.
-Func AddPattern($aPattern) ;modified by Greg76 for scan wildcards
-    Local $lSize = Int(0.5 * StringLen($aPattern))
-    Local $pattern_header = "00000000" & _
-                           SwapEndian(Hex($lSize, 8)) & _
-                           "00000000"
-
-    $mASMString &= $pattern_header & $aPattern
-    $mASMSize += $lSize + 12
-
-    Local $padding_count = 68 - $lSize
-    For $i = 1 To $padding_count
-        $mASMSize += 1
-        $mASMString &= "00"
-    Next
-EndFunc
+Func AddPattern($aPattern)
+	Local $lSize = Int(0.5 * StringLen($aPattern))
+	$mASMString &= '00000000' & SwapEndian(Hex($lSize, 8)) & '00000000' & $aPattern
+	$mASMSize += $lSize + 12
+	For $i = 1 To 68 - $lSize
+		$mASMSize += 1
+		$mASMString &= '00'
+	Next
+EndFunc   ;==>AddPattern
 
 ;~ Description: Internal use only.
 Func GetScannedAddress($aLabel, $aOffset)
@@ -882,7 +769,7 @@ EndFunc   ;==>GetScannedAddress
 
 ;~ Description: Internal use only.
 Func ScanForCharname()
-	Local $lCharNameCode = BinaryToString('0x6A14FF751868') ;0x90909066C705
+	Local $lCharNameCode = BinaryToString('0xCCCCCC558BEC5166') ;0x90909066C705
 	Local $lCurrentSearchAddress = 0x00000000 ;0x00401000
 	Local $lMBI[7], $lMBIBuffer = DllStructCreate('dword;dword;dword;dword;dword;dword;dword')
 	Local $lSearch, $lTmpMemData, $lTmpAddress, $lTmpBuffer = DllStructCreate('ptr'), $i
@@ -903,7 +790,7 @@ Func ScanForCharname()
 			$lSearch = StringInStr($lTmpMemData, $lCharNameCode, 2)
 			If $lSearch > 0 Then
 				$lTmpAddress = $lCurrentSearchAddress + $lSearch - 1
-				DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $lTmpAddress + 6, 'ptr', DllStructGetPtr($lTmpBuffer), 'int', DllStructGetSize($lTmpBuffer), 'int', '')
+				DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $lTmpAddress + 10, 'ptr', DllStructGetPtr($lTmpBuffer), 'int', DllStructGetSize($lTmpBuffer), 'int', '')
 				$mCharname = DllStructGetData($lTmpBuffer, 1)
 				Return GetCharname()
 			EndIf
@@ -914,10 +801,13 @@ Func ScanForCharname()
 EndFunc   ;==>ScanForCharname
 #EndRegion Initialisation
 
+#Region Commands
 #Region Item
+;~ Description: Starts a salvaging session of an item.
 Func StartSalvage($aItem)
 	Local $lOffset[4] = [0, 0x18, 0x2C, 0x690]
 	Local $lSalvageSessionID = MemoryReadPtr($mBasePointer, $lOffset)
+
 	If IsDllStruct($aItem) = 0 Then
 		Local $lItemID = $aItem
 	Else
@@ -934,29 +824,19 @@ Func StartSalvage($aItem)
 	Enqueue($mSalvagePtr, 16)
 EndFunc   ;==>StartSalvage
 
-Func ItemID($aItem)
-	If IsPtr($aItem) Then
-		Return MemoryRead($aItem, "long")
-	ElseIf IsDllStruct($aItem) Then
-		Return DllStructGetData($aItem, "ID")
-	Else
-		Return $aItem
-	EndIf
-EndFunc   ;==>ItemID
-
 ;~ Description: Salvage the materials out of an item.
 Func SalvageMaterials()
-	Return SendPacket(0x4, $HEADER_ITEM_SALVAGE_MATERIALS)
+	Return SendPacket(0x4, $HEADER_SALVAGE_MATS)
 EndFunc   ;==>SalvageMaterials
 
 ;~ Description: Salvages a mod out of an item.
 Func SalvageMod($aModIndex)
-	Return SendPacket(0x8, $HEADER_ITEM_SALVAGE_UPGRADE, $aModIndex)
+	Return SendPacket(0x8, $HEADER_SALVAGE_MODS, $aModIndex)
 EndFunc   ;==>SalvageMod
 
 ;~ Description: Identifies an item.
 Func IdentifyItem($aItem)
-	If GetIsIdentified($aItem) Then Return
+	If GetIsIDed($aItem) Then Return
 
 	Local $lItemID
 	If IsDllStruct($aItem) = 0 Then
@@ -965,29 +845,28 @@ Func IdentifyItem($aItem)
 		$lItemID = DllStructGetData($aItem, 'ID')
 	EndIf
 
-	Local $lIDKit = FindIdentificationKit()
+	Local $lIDKit = FindIDKit()
 	If $lIDKit == 0 Then Return
 
-	SendPacket(0xC, $HEADER_ITEM_IDENTIFY, $lIDKit, $lItemID)
+	SendPacket(0xC, $HEADER_ITEM_ID, $lIDKit, $lItemID)
 
 	Local $lDeadlock = TimerInit()
 	Do
 		Sleep(20)
-	Until GetIsIdentified($lItemID) Or TimerDiff($lDeadlock) > 5000
-	If Not GetIsIdentified($lItemID) Then IdentifyItem($lItemID)
+	Until GetIsIDed($lItemID) Or TimerDiff($lDeadlock) > 5000
+	If Not GetIsIDed($lItemID) Then IdentifyItem($aItem)
 EndFunc   ;==>IdentifyItem
 
 ;~ Description: Identifies all items in a bag.
 Func IdentifyBag($aBag, $aWhites = False, $aGolds = True)
-	;	Local $lItem
-	Local $LITEM
+	Local $lItem
 	If Not IsDllStruct($aBag) Then $aBag = GetBag($aBag)
 	For $i = 1 To DllStructGetData($aBag, 'Slots')
-		$LITEM = GetItemBySlot($aBag, $i)
-		If DllStructGetData($LITEM, 'ID') == 0 Then ContinueLoop
-		If GetRarity($LITEM) == 2621 And $aWhites == False Then ContinueLoop
-		If GetRarity($LITEM) == 2624 And $aGolds == False Then ContinueLoop
-		IdentifyItem($LITEM)
+		$lItem = GetItemBySlot($aBag, $i)
+		If DllStructGetData($lItem, 'ID') == 0 Then ContinueLoop
+		If GetRarity($lItem) == 2621 And $aWhites == False Then ContinueLoop
+		If GetRarity($lItem) == 2624 And $aGolds == False Then ContinueLoop
+		IdentifyItem($lItem)
 		Sleep(GetPing())
 	Next
 EndFunc   ;==>IdentifyBag
@@ -1053,7 +932,7 @@ Func DropItem($aItem, $aAmount = 0)
 		EndIf
 	EndIf
 
-	Return SendPacket(0xC, $HEADER_DROP_ITEM, $lItemID, $lAmount)
+	Return SendPacket(0xC, $HEADER_ITEM_DROP, $lItemID, $lAmount)
 EndFunc   ;==>DropItem
 
 ;~ Description: Moves an item.
@@ -1105,33 +984,15 @@ Func BuyItem($aItem, $aQuantity, $aValue)
 	Enqueue($mBuyItemPtr, 20)
 EndFunc   ;==>BuyItem
 
-;~ Description: Legacy function, use BuyIdentificationKit instead.
-Func BuyIDKit($aQuantity = 1)
-	BuyIdentificationKit($aQuantity)
+;~ Description: Buys an ID kit.
+Func BuyIDKit()
+	BuyItem(5, 1, 100)
 EndFunc   ;==>BuyIDKit
 
-;~ Description: Buys an ID kit.
-Func BuyIdentificationKit($aQuantity = 1)
-	BuyItem(5, $aQuantity, 100)
-EndFunc   ;==>BuyIdentificationKit
-
-;~ Description: Legacy function, use BuySuperiorIdentificationKit instead.
-Func BuySuperiorIDKit($aQuantity = 1)
-	BuySuperiorIdentificationKit($aQuantity)
-EndFunc   ;==>BuySuperiorIDKit
-
 ;~ Description: Buys a superior ID kit.
-Func BuySuperiorIdentificationKit($aQuantity = 1)
-	BuyItem(6, $aQuantity, 500)
-EndFunc   ;==>BuySuperiorIdentificationKit
-
-Func BuySalvageKit($aQuantity = 1)
-	BuyItem(2, $aQuantity, 100)
-EndFunc   ;==>BuySalvageKit
-
-Func BuyExpertSalvageKit($aQuantity = 1)
-	BuyItem(3, $aQuantity, 400)
-EndFunc   ;==>BuyExpertSalvageKit
+Func BuySuperiorIDKit()
+	BuyItem(6, 1, 500)
+EndFunc   ;==>BuySuperiorIDKit
 
 Func CraftItemEx($aModelID, $aQuantity, $aGold, ByRef $aMatsArray)
 	Local $pSrcItem = GetInventoryItemPtrByModelId($aMatsArray[0][0])
@@ -1152,8 +1013,8 @@ Func CraftItemEx($aModelID, $aQuantity, $aGold, ByRef $aMatsArray)
 ;~ 	out($lMatsArraySize)
 
 	For $i = 0 To $lMatsArraySize
-		$lMatString &= GetItemIDfromMobelID($aMatsArray[$i][0]) & ';' ;GetCraftMatsString($aMatsArray[$i][0], $aQuantity * $aMatsArray[$i][1])
-;~ 		out($lMatString)
+		$lMatString &= GetItemIDfromMobelID($aMatsArray[$i][0]) & ';';GetCraftMatsString($aMatsArray[$i][0], $aQuantity * $aMatsArray[$i][1])
+		out($lMatString)
 		$lMatCount += 1 ;@extended
 ;~ 		out($lMatCount)
 	Next
@@ -1179,19 +1040,19 @@ Func CraftItemEx($aModelID, $aQuantity, $aGold, ByRef $aMatsArray)
 	DllStructSetData($mCraftItemEx, 1, GetValue('CommandCraftItemEx'))
 	DllStructSetData($mCraftItemEx, 2, $aQuantity)
 ;~ 	Out($aQuantity)
-;~ 	Sleep(3000)
+;~     Sleep(3000)
 	DllStructSetData($mCraftItemEx, 3, $pDstItem)
 ;~ 	Out($pDstItem)
-;~ 	Sleep(3000)
+;~     Sleep(3000)
 	DllStructSetData($mCraftItemEx, 4, $lBufferMemory[0])
-;~ 	Out($lBufferMemory[0])
-;~ 	Sleep(3000)
+	Out($lBufferMemory[0])
+;~     Sleep(3000)
 	DllStructSetData($mCraftItemEx, 5, $lMatCount)
-;~ 	Out($lMatCount)
-;~ 	Sleep(3000)
+	Out($lMatCount)
+;~     Sleep(3000)
 	DllStructSetData($mCraftItemEx, 6, $aQuantity * $aGold)
-;~ 	Out($aQuantity * $aGold)
-;~ 	Sleep(3000)
+	Out($aQuantity * $aGold)
+;~     Sleep(3000)
 	Enqueue($mCraftItemExPtr, 24)
 	$lDeadlock = TimerInit()
 	Do
@@ -1252,7 +1113,6 @@ Func GetMerchantItemPtrByModelId($nModelId)
 		EndIf
 	Next
 EndFunc   ;==>GetMerchantItemPtrByModelId
-
 Func GetInventoryItemPtrByModelId($nModelId)
 	Local $aOffsets[5] = [0, 0x18, 0x40, 0xF8]
 	Local $pItemArray = 0
@@ -1276,41 +1136,40 @@ EndFunc   ;==>GetInventoryItemPtrByModelId
 
 ;~ Description: Request a quote to buy an item from a trader. Returns true if successful.
 Func TraderRequest($aModelID, $aExtraID = -1)
-    Local $lOffset[4] = [0, 0x18, 0x40, 0xC0]
-    Local $lItemArraySize = MemoryReadPtr($mBasePointer, $lOffset)
-    Local $lOffset[5] = [0, 0x18, 0x40, 0xB8, 0]
-    Local $lItemPtr, $lItemID
-    Local $lFound = False
-    Local $lQuoteID = MemoryRead($mTraderQuoteID)
+	Local $lItemStruct = DllStructCreate('long Id;long AgentId;byte Unknown1[4];ptr Bag;ptr ModStruct;long ModStructSize;ptr Customized;byte unknown2[4];byte Type;byte unknown4;short ExtraId;short Value;byte unknown4[2];short Interaction;long ModelId;ptr ModString;byte unknown5[4];ptr NameString;ptr SingleItemName;byte Unknown4[10];byte IsSalvageable;byte Unknown6;byte Quantity;byte Equiped;byte Profession;byte Type2;byte Slot')
 
-    For $lItemID = 1 To $lItemArraySize[1]
-        $lOffset[4] = 0x4 * $lItemID
-        $lItemPtr = MemoryReadPtr($mBasePointer, $lOffset)
-        If $lItemPtr[1] = 0 Then ContinueLoop
+	Local $lOffset[4] = [0, 0x18, 0x40, 0xC0]
+	Local $lItemArraySize = MemoryReadPtr($mBasePointer, $lOffset)
+	Local $lOffset[5] = [0, 0x18, 0x40, 0xB8, 0]
+	Local $lItemPtr, $lItemID
+	Local $lFound = False
+	Local $lQuoteID = MemoryRead($mTraderQuoteID)
 
-        DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $lItemPtr[1], 'ptr', DllStructGetPtr($g_ItemStruct), 'int', DllStructGetSize($g_ItemStruct), 'int', '')
+	For $lItemID = 1 To $lItemArraySize[1]
+		$lOffset[4] = 0x4 * $lItemID
+		$lItemPtr = MemoryReadPtr($mBasePointer, $lOffset)
+		If $lItemPtr[1] = 0 Then ContinueLoop
 
-        If DllStructGetData($g_ItemStruct, 'ModelID') = $aModelID And DllStructGetData($g_ItemStruct, 'bag') = 0 And DllStructGetData($g_ItemStruct, 'AgentID') == 0 Then
-            If $aExtraID = -1 Or DllStructGetData($g_ItemStruct, 'ExtraID') = $aExtraID Then
-                $lFound = True
-                ExitLoop
-            EndIf
-        EndIf
-    Next
+		DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $lItemPtr[1], 'ptr', DllStructGetPtr($lItemStruct), 'int', DllStructGetSize($lItemStruct), 'int', '')
+		If DllStructGetData($lItemStruct, 'ModelID') = $aModelID And DllStructGetData($lItemStruct, 'bag') = 0 And DllStructGetData($lItemStruct, 'AgentID') == 0 Then
+			If $aExtraID = -1 Or DllStructGetData($lItemStruct, 'ExtraID') = $aExtraID Then
+				$lFound = True
+				ExitLoop
+			EndIf
+		EndIf
+	Next
+	If Not $lFound Then Return False
 
-    If Not $lFound Then Return False
+	DllStructSetData($mRequestQuote, 2, DllStructGetData($lItemStruct, 'ID'))
+	Enqueue($mRequestQuotePtr, 8)
 
-    DllStructSetData($mRequestQuote, 2, DllStructGetData($g_ItemStruct, 'ID'))
-    Enqueue($mRequestQuotePtr, 8)
-
-    Local $lDeadlock = TimerInit()
-    $lFound = False
-    Do
-        Sleep(20)
-        $lFound = MemoryRead($mTraderQuoteID) <> $lQuoteID
-    Until $lFound Or TimerDiff($lDeadlock) > GetPing() + 5000
-
-    Return $lFound
+	Local $lDeadlock = TimerInit()
+	$lFound = False
+	Do
+		Sleep(20)
+		$lFound = MemoryRead($mTraderQuoteID) <> $lQuoteID
+	Until $lFound Or TimerDiff($lDeadlock) > GetPing() + 5000
+	Return $lFound
 EndFunc   ;==>TraderRequest
 
 ;~ Description: Buy the requested item.
@@ -1320,33 +1179,7 @@ Func TraderBuy()
 	Return True
 EndFunc   ;==>TraderBuy
 
-;~ Description: This shit might not work as intended :3
-Func TraderRequestBuy($aItem)
-	Local $lItemID
-	Local $lFound = False
-	Local $lQuoteID = MemoryRead($mTraderQuoteID)
-
-	If IsDllStruct($aItem) = 0 Then
-	   $lItemID = $aItem
-	Else
-	   $lItemID = DllStructGetData($aItem, 'ID')
-	EndIf
-
-	DllStructSetData($mRequestQuote, 1, $HEADER_REQUEST_QUOTE)
-	DllStructSetData($mRequestQuote, 2, $lItemID)
-	Enqueue($mRequestQuotePtr, 8)
-
-	Local $lDeadlock = TimerInit()
-	$lFound = False
-	Do
-	   Sleep(20)
-	   $lFound = MemoryRead($mTraderQuoteID) <> $lQuoteID
-	Until $lFound Or TimerDiff($lDeadlock) > GetPing() + 5000
-
-	Return $lFound
- EndFunc  ;==>TraderRequestBuy
-
-;~ Description: Request a quote to sell an item to the trader
+;~ Description: Request a quote to sell an item to the trader.
 Func TraderRequestSell($aItem)
 	Local $lItemID
 	Local $lFound = False
@@ -1358,7 +1191,6 @@ Func TraderRequestSell($aItem)
 		$lItemID = DllStructGetData($aItem, 'ID')
 	EndIf
 
-	DllStructSetData($mRequestQuoteSell, 1, $HEADER_REQUEST_QUOTE)
 	DllStructSetData($mRequestQuoteSell, 2, $lItemID)
 	Enqueue($mRequestQuoteSellPtr, 8)
 
@@ -1367,11 +1199,8 @@ Func TraderRequestSell($aItem)
 		Sleep(20)
 		$lFound = MemoryRead($mTraderQuoteID) <> $lQuoteID
 	Until $lFound Or TimerDiff($lDeadlock) > GetPing() + 5000
-
 	Return $lFound
 EndFunc   ;==>TraderRequestSell
-
-
 
 ;~ Description: ID of the item item being sold.
 Func TraderSell()
@@ -1390,7 +1219,7 @@ Func DropGold($aAmount = 0)
 		$lAmount = GetGoldCharacter()
 	EndIf
 
-	Return SendPacket(0x8, $HEADER_DROP_GOLD, $lAmount)
+	Return SendPacket(0x8, $HEADER_GOLD_DROP, $lAmount)
 EndFunc   ;==>DropGold
 
 ;~ Description: Deposit gold into storage.
@@ -1429,7 +1258,7 @@ EndFunc   ;==>WithdrawGold
 
 ;~ Description: Internal use for moving gold.
 Func ChangeGold($aCharacter, $aStorage)
-	Return SendPacket(0xC, $HEADER_ITEM_CHANGE_GOLD, $aCharacter, $aStorage) ;0x75
+	Return SendPacket(0xC, $HEADER_CHANGE_GOLD, $aCharacter, $aStorage) ;0x75
 EndFunc   ;==>ChangeGold
 #EndRegion Item
 
@@ -1446,50 +1275,50 @@ EndFunc   ;==>KickHero
 
 ;~ Description: Kicks all heroes from the party.
 Func KickAllHeroes()
-	Return SendPacket(0x8, $HEADER_HERO_KICK, 0x26)
-EndFunc
+	Return SendPacket(0x8, $HEADER_HEROES_KICK, 0x26)
+EndFunc   ;==>KickAllHeroes
 
 ;~ Description: Add a henchman to the party.
 Func AddNpc($aNpcId)
-	Return SendPacket(0x8, $HEADER_PARTY_INVITE_NPC, $aNpcId)
+	Return SendPacket(0x8, $HEADER_HENCHMAN_ADD, $aNpcId)
 EndFunc   ;==>AddNpc
 
 ;~ Description: Kick a henchman from the party.
 Func KickNpc($aNpcId)
-	Return SendPacket(0x8, $HEADER_PARTY_KICK_NPC, $aNpcId)
+	Return SendPacket(0x8, $HEADER_HENCHMAN_KICK, $aNpcId)
 EndFunc   ;==>KickNpc
 
 ;~ Description: Clear the position flag from a hero.
 Func CancelHero($aHeroNumber)
 	Local $lAgentID = GetHeroID($aHeroNumber)
-	Return SendPacket(0x14, $HEADER_HERO_FLAG_SINGLE, $lAgentID, 0x7F800000, 0x7F800000, 0)
+	Return SendPacket(0x14, $HEADER_HERO_CLEAR_FLAG, $lAgentID, 0x7F800000, 0x7F800000, 0)
 EndFunc   ;==>CancelHero
 
 ;~ Description: Clear the position flag from all heroes.
 Func CancelAll()
-	Return SendPacket(0x10, $HEADER_HERO_FLAG_ALL, 0x7F800000, 0x7F800000, 0)
+	Return SendPacket(0x10, $HEADER_PARTY_CLEAR_FLAG, 0x7F800000, 0x7F800000, 0)
 EndFunc   ;==>CancelAll
 
 ;~ Description: Place a hero's position flag.
 Func CommandHero($aHeroNumber, $aX, $aY)
-	Return SendPacket(0x14, $HEADER_HERO_FLAG_SINGLE, GetHeroID($aHeroNumber), FloatToInt($aX), FloatToInt($aY), 0)
+	Return SendPacket(0x14, $HEADER_HERO_PLACE_FLAG, GetHeroID($aHeroNumber), FloatToInt($aX), FloatToInt($aY), 0)
 EndFunc   ;==>CommandHero
 
 ;~ Description: Place the full-party position flag.
 Func CommandAll($aX, $aY)
-	Return SendPacket(0x10, $HEADER_HERO_FLAG_ALL, FloatToInt($aX), FloatToInt($aY), 0)
+	Return SendPacket(0x10, $HEADER_PARTY_PLACE_FLAG, FloatToInt($aX), FloatToInt($aY), 0)
 EndFunc   ;==>CommandAll
 
 ;~ Description: Lock a hero onto a target.
 Func LockHeroTarget($aHeroNumber, $aAgentID = 0) ;$aAgentID=0 Cancels Lock
 	Local $lHeroID = GetHeroID($aHeroNumber)
-	Return SendPacket(0xC, $HEADER_HERO_LOCK_TARGET, $lHeroID, $aAgentID)
+	Return SendPacket(0xC, $HEADER_HERO_LOCK, $lHeroID, $aAgentID)
 EndFunc   ;==>LockHeroTarget
 
 ;~ Description: Change a hero's aggression level.
 Func SetHeroAggression($aHeroNumber, $aAggression) ;0=Fight, 1=Guard, 2=Avoid
 	Local $lHeroID = GetHeroID($aHeroNumber)
-	Return SendPacket(0xC, $HEADER_HERO_BEHAVIOR, $lHeroID, $aAggression)
+	Return SendPacket(0xC, $HEADER_HERO_AGGRESSION, $lHeroID, $aAggression)
 EndFunc   ;==>SetHeroAggression
 
 ;~ Description: Disable a skill on a hero's skill bar.
@@ -1504,13 +1333,21 @@ EndFunc   ;==>EnableHeroSkillSlot
 
 ;~ Description: Internal use for enabling or disabling hero skills
 Func ChangeHeroSkillSlotState($aHeroNumber, $aSkillSlot)
-	Return SendPacket(0xC, $HEADER_HERO_SKILL_TOGGLE, GetHeroID($aHeroNumber), $aSkillSlot - 1)
+	Return SendPacket(0xC, $HEADER_HERO_TOGGLE_SKILL, GetHeroID($aHeroNumber), $aSkillSlot - 1)
 EndFunc   ;==>ChangeHeroSkillSlotState
 
 ;~ Description: Order a hero to use a skill.
-Func UseHeroSkill($aHero, $aSkillSlot, $aTarget = -2)
+Func UseHeroSkill($aHero, $aSkillSlot, $aTarget = 0)
+	Local $lTargetID
+
+	If IsDllStruct($aTarget) = 0 Then
+		$lTargetID = ConvertID($aTarget)
+	Else
+		$lTargetID = DllStructGetData($aTarget, 'ID')
+	EndIf
+
 	DllStructSetData($mUseHeroSkill, 2, GetHeroID($aHero))
-	DllStructSetData($mUseHeroSkill, 3, ConvertID($aTarget))
+	DllStructSetData($mUseHeroSkill, 3, $lTargetID)
 	DllStructSetData($mUseHeroSkill, 4, $aSkillSlot - 1)
 	Enqueue($mUseHeroSkillPtr, 16)
 EndFunc   ;==>UseHeroSkill
@@ -1534,7 +1371,7 @@ EndFunc   ;==>Move
 Func MoveTo($aX, $aY, $aRandom = 50)
 	Local $lBlocked = 0
 	Local $lMe
-	Local $lMapLoading = GetInstanceType(), $lMapLoadingOld
+	Local $lMapLoading = GetMapLoading(), $lMapLoadingOld
 	Local $lDestX = $aX + Random(-$aRandom, $aRandom)
 	Local $lDestY = $aY + Random(-$aRandom, $aRandom)
 
@@ -1542,104 +1379,135 @@ Func MoveTo($aX, $aY, $aRandom = 50)
 
 	Do
 		Sleep(100)
-		$lMe = GetAgentPtr(-2)
+		$lMe = GetAgentByID(-2)
 
-		If GetAgentInfo($lMe, 'HP') <= 0 Then ExitLoop
+		If DllStructGetData($lMe, 'HP') <= 0 Then ExitLoop
 
 		$lMapLoadingOld = $lMapLoading
-		$lMapLoading = GetInstanceType()
+		$lMapLoading = GetMapLoading()
 		If $lMapLoading <> $lMapLoadingOld Then ExitLoop
 
-		If GetAgentInfo($lMe, 'MoveX') == 0 And GetAgentInfo($lMe, 'MoveY') == 0 Then
+		If DllStructGetData($lMe, 'MoveX') == 0 And DllStructGetData($lMe, 'MoveY') == 0 Then
 			$lBlocked += 1
 			$lDestX = $aX + Random(-$aRandom, $aRandom)
 			$lDestY = $aY + Random(-$aRandom, $aRandom)
 			Move($lDestX, $lDestY, 0)
 		EndIf
-	Until ComputeDistance(GetAgentInfo($lMe, 'X'), GetAgentInfo($lMe, 'Y'), $lDestX, $lDestY) < 25 Or $lBlocked > 14
+	Until ComputeDistance(DllStructGetData($lMe, 'X'), DllStructGetData($lMe, 'Y'), $lDestX, $lDestY) < 25 Or $lBlocked > 14
 EndFunc   ;==>MoveTo
 
 ;~ Description: Run to or follow a player.
 Func GoPlayer($aAgent)
-	Return SendPacket(0x8, $HEADER_INTERACT_PLAYER, ConvertID($aAgent))
+	Local $lAgentID
+
+	If IsDllStruct($aAgent) = 0 Then
+		$lAgentID = ConvertID($aAgent)
+	Else
+		$lAgentID = DllStructGetData($aAgent, 'ID')
+	EndIf
+
+	Return SendPacket(0x8, $HEADER_GO_PLAYER, $lAgentID)
 EndFunc   ;==>GoPlayer
 
 ;~ Description: Talk to an NPC
 Func GoNPC($aAgent)
-	Return SendPacket(0xC, $HEADER_INTERACT_LIVING, ConvertID($aAgent))
+	Local $lAgentID
+
+	If IsDllStruct($aAgent) = 0 Then
+		$lAgentID = ConvertID($aAgent)
+	Else
+		$lAgentID = DllStructGetData($aAgent, 'ID')
+	EndIf
+
+	Return SendPacket(0xC, $HEADER_NPC_TALK, $lAgentID)
 EndFunc   ;==>GoNPC
 
 ;~ Description: Talks to NPC and waits until you reach them.
 Func GoToNPC($aAgent)
+	If Not IsDllStruct($aAgent) Then $aAgent = GetAgentByID($aAgent)
 	Local $lMe
 	Local $lBlocked = 0
-	Local $lMapLoading = GetInstanceType(), $lMapLoadingOld
+	Local $lMapLoading = GetMapLoading(), $lMapLoadingOld
 
-	Move(GetAgentInfo($aAgent, 'X'), GetAgentInfo($aAgent, 'Y'), 100)
+	Move(DllStructGetData($aAgent, 'X'), DllStructGetData($aAgent, 'Y'), 100)
 	Sleep(100)
 	GoNPC($aAgent)
 
 	Do
 		Sleep(100)
-		$lMe = GetAgentPtr(-2)
+		$lMe = GetAgentByID(-2)
 
-		If GetAgentInfo($lMe, 'HP') <= 0 Then ExitLoop
+		If DllStructGetData($lMe, 'HP') <= 0 Then ExitLoop
 
 		$lMapLoadingOld = $lMapLoading
-		$lMapLoading = GetInstanceType()
+		$lMapLoading = GetMapLoading()
 		If $lMapLoading <> $lMapLoadingOld Then ExitLoop
 
-		If GetAgentInfo($lMe, 'MoveX') == 0 And GetAgentInfo($lMe, 'MoveY') == 0 Then
+		If DllStructGetData($lMe, 'MoveX') == 0 And DllStructGetData($lMe, 'MoveY') == 0 Then
 			$lBlocked += 1
-			Move(GetAgentInfo($aAgent, 'X'), GetAgentInfo($aAgent, 'Y'), 100)
+			Move(DllStructGetData($aAgent, 'X'), DllStructGetData($aAgent, 'Y'), 100)
 			Sleep(100)
 			GoNPC($aAgent)
 		EndIf
-	Until ComputeDistance(GetAgentInfo($lMe, 'X'), GetAgentInfo($lMe, 'Y'), GetAgentInfo($aAgent, 'X'), GetAgentInfo($aAgent, 'Y')) < 250 Or $lBlocked > 14
+	Until ComputeDistance(DllStructGetData($lMe, 'X'), DllStructGetData($lMe, 'Y'), DllStructGetData($aAgent, 'X'), DllStructGetData($aAgent, 'Y')) < 250 Or $lBlocked > 14
 	Sleep(GetPing() + Random(1500, 2000, 1))
 EndFunc   ;==>GoToNPC
 
 ;~ Description: Run to a signpost.
 Func GoSignpost($aAgent)
-	Return SendPacket(0xC, $HEADER_GADGET_INTERACT, ConvertID($aAgent), 0)
-;~ 	ChangeTarget($aAgent)
-;~ 	sleep(16) ;not sure if needed
-;~     ActionInteract()
+	Local $lAgentID
+
+	If IsDllStruct($aAgent) = 0 Then
+		$lAgentID = ConvertID($aAgent)
+	Else
+		$lAgentID = DllStructGetData($aAgent, 'ID')
+	EndIf
+
+	Return SendPacket(0xC, $HEADER_SIGNPOST_RUN, $lAgentID, 0)
 EndFunc   ;==>GoSignpost
 
 ;~ Description: Go to signpost and waits until you reach it.
 Func GoToSignpost($aAgent)
+	If Not IsDllStruct($aAgent) Then $aAgent = GetAgentByID($aAgent)
 	Local $lMe
 	Local $lBlocked = 0
-	Local $lMapLoading = GetInstanceType(), $lMapLoadingOld
+	Local $lMapLoading = GetMapLoading(), $lMapLoadingOld
 
-	Move(GetAgentInfo($aAgent, 'X'), GetAgentInfo($aAgent, 'Y'), 100)
+	Move(DllStructGetData($aAgent, 'X'), DllStructGetData($aAgent, 'Y'), 100)
 	Sleep(100)
 	GoSignpost($aAgent)
 
 	Do
 		Sleep(100)
-		$lMe = GetAgentPtr(-2)
+		$lMe = GetAgentByID(-2)
 
-		If GetAgentInfo($lMe, 'HP') <= 0 Then ExitLoop
+		If DllStructGetData($lMe, 'HP') <= 0 Then ExitLoop
 
 		$lMapLoadingOld = $lMapLoading
-		$lMapLoading = GetInstanceType()
+		$lMapLoading = GetMapLoading()
 		If $lMapLoading <> $lMapLoadingOld Then ExitLoop
 
-		If GetAgentInfo($lMe, 'MoveX') == 0 And GetAgentInfo($lMe, 'MoveY') == 0 Then
+		If DllStructGetData($lMe, 'MoveX') == 0 And DllStructGetData($lMe, 'MoveY') == 0 Then
 			$lBlocked += 1
-			Move(GetAgentInfo($aAgent, 'X'), GetAgentInfo($aAgent, 'Y'), 100)
+			Move(DllStructGetData($aAgent, 'X'), DllStructGetData($aAgent, 'Y'), 100)
 			Sleep(100)
 			GoSignpost($aAgent)
 		EndIf
-	Until ComputeDistance(GetAgentInfo($lMe, 'X'), GetAgentInfo($lMe, 'Y'), GetAgentInfo($aAgent, 'X'), GetAgentInfo($aAgent, 'Y')) < 250 Or $lBlocked > 14
+	Until ComputeDistance(DllStructGetData($lMe, 'X'), DllStructGetData($lMe, 'Y'), DllStructGetData($aAgent, 'X'), DllStructGetData($aAgent, 'Y')) < 250 Or $lBlocked > 14
 	Sleep(GetPing() + Random(1500, 2000, 1))
 EndFunc   ;==>GoToSignpost
 
 ;~ Description: Attack an agent.
 Func Attack($aAgent, $aCallTarget = False)
-	Return SendPacket(0xC, $HEADER_ACTION_ATTACK, ConvertID($aAgent), $aCallTarget)
+	Local $lAgentID
+
+	If IsDllStruct($aAgent) = 0 Then
+		$lAgentID = ConvertID($aAgent)
+	Else
+		$lAgentID = DllStructGetData($aAgent, 'ID')
+	EndIf
+
+	Return SendPacket(0xC, $HEADER_ATTACK_AGENT, $lAgentID, $aCallTarget)
 EndFunc   ;==>Attack
 
 ;~ Description: Turn character to the left.
@@ -1711,54 +1579,47 @@ EndFunc   ;==>ReverseDirection
 ;~ Description: Map travel to an outpost.
 Func TravelTo($aMapID, $aDis = 0)
 	;returns true if successful
-	If GetMapID() = $aMapID And $aDis = 0 And GetInstanceType() = 0 Then Return True
+	If GetMapID() = $aMapID And $aDis = 0 And GetMapLoading() = 0 Then Return True
 	ZoneMap($aMapID, $aDis)
 	Return WaitMapLoading($aMapID)
 EndFunc   ;==>TravelTo
 
-Func TravelToEx($aMapID, $aDis = 0)
-	;returns true if successful
-	If GetMapID() = $aMapID And $aDis = 0 And GetInstanceType() = 0 Then Return True
-	ZoneMap($aMapID, $aDis)
-	Return WaitMapLoading($aMapID)
-EndFunc   ;==>TravelToEx
-
 ;~ Description: Internal use for map travel.
 Func ZoneMap($aMapID, $aDistrict = 0)
-	MoveMap($aMapID, GetRegion(), $aDistrict, GetLanguage()) ;
+	MoveMap($aMapID, GetRegion(), $aDistrict, GetLanguage());
 EndFunc   ;==>ZoneMap
 
 ;~ Description: Internal use for map travel.
 Func MoveMap($aMapID, $aRegion, $aDistrict, $aLanguage)
-	Return SendPacket(0x18, $HEADER_PARTY_TRAVEL, $aMapID, $aRegion, $aDistrict, $aLanguage, False)
+	Return SendPacket(0x18, $HEADER_MAP_TRAVEL, $aMapID, $aRegion, $aDistrict, $aLanguage, False)
 EndFunc   ;==>MoveMap
 
 ;~ Description: Returns to outpost after resigning/failure.
 Func ReturnToOutpost()
-	Return SendPacket(0x4, $HEADER_PARTY_RETURN_TO_OUTPOST)
+	Return SendPacket(0x4, $HEADER_OUTPOST_RETURN)
 EndFunc   ;==>ReturnToOutpost
 
 ;~ Description: Enter a challenge mission/pvp.
 Func EnterChallenge()
-	Return SendPacket(0x8, $HEADER_PARTY_ENTER_CHALLENGE, 1)
+	Return SendPacket(0x8, $HEADER_MISSION_ENTER, 1)
 EndFunc   ;==>EnterChallenge
 
 ;~ Description: Enter a foreign challenge mission/pvp.
-; Func EnterChallengeForeign()
-	; Return SendPacket(0x8, $HEADER_PARTY_ENTER_FOREIGN_CHALLENGE, 0)
-; EndFunc   ;==>EnterChallengeForeign
+Func EnterChallengeForeign()
+	Return SendPacket(0x8, $HEADER_MISSION_FOREIGN_ENTER, 0)
+EndFunc   ;==>EnterChallengeForeign
 
 ;~ Description: Travel to your guild hall.
 Func TravelGH()
 	Local $lOffset[3] = [0, 0x18, 0x3C]
 	Local $lGH = MemoryReadPtr($mBasePointer, $lOffset)
-	SendPacket(0x18, $HEADER_PARTY_ENTER_GUILD_HALL, MemoryRead($lGH[1] + 0x64), MemoryRead($lGH[1] + 0x68), MemoryRead($lGH[1] + 0x6C), MemoryRead($lGH[1] + 0x70), 1)
+	SendPacket(0x18, $HEADER_GUILDHALL_TRAVEL, MemoryRead($lGH[1] + 0x64), MemoryRead($lGH[1] + 0x68), MemoryRead($lGH[1] + 0x6C), MemoryRead($lGH[1] + 0x70), 1)
 	Return WaitMapLoading()
 EndFunc   ;==>TravelGH
 
 ;~ Description: Leave your guild hall.
 Func LeaveGH()
-	SendPacket(0x8, $HEADER_PARTY_LEAVE_GUILD_HALL, 1)
+	SendPacket(0x8, $HEADER_GUILDHALL_LEAVE, 1)
 	Return WaitMapLoading()
 EndFunc   ;==>LeaveGH
 #EndRegion Travel
@@ -1766,12 +1627,12 @@ EndFunc   ;==>LeaveGH
 #Region Quest
 ;~ Description: Accept a quest from an NPC.
 Func AcceptQuest($aQuestID)
-	Return SendPacket(0x8, $HEADER_DIALOG_SEND, '0x008' & Hex($aQuestID, 3) & '01')
+	Return SendPacket(0x8, $HEADER_QUEST_ACCEPT, '0x008' & Hex($aQuestID, 3) & '01')
 EndFunc   ;==>AcceptQuest
 
 ;~ Description: Accept the reward for a quest.
 Func QuestReward($aQuestID)
-	Return SendPacket(0x8, $HEADER_DIALOG_SEND, '0x008' & Hex($aQuestID, 3) & '07')
+	Return SendPacket(0x8, $HEADER_QUEST_REWARD, '0x008' & Hex($aQuestID, 3) & '07')
 EndFunc   ;==>QuestReward
 
 ;~ Description: Abandon a quest.
@@ -1888,13 +1749,29 @@ EndFunc   ;==>ToggleHelpWindow
 #Region Targeting
 ;~ Description: Target an agent.
 Func ChangeTarget($aAgent)
-	DllStructSetData($mChangeTarget, 2, ConvertID($aAgent))
+	Local $lAgentID
+
+	If IsDllStruct($aAgent) = 0 Then
+		$lAgentID = ConvertID($aAgent)
+	Else
+		$lAgentID = DllStructGetData($aAgent, 'ID')
+	EndIf
+
+	DllStructSetData($mChangeTarget, 2, $lAgentID)
 	Enqueue($mChangeTargetPtr, 8)
 EndFunc   ;==>ChangeTarget
 
 ;~ Description: Call target.
 Func CallTarget($aTarget)
-	Return SendPacket(0xC, $HEADER_CALL_TARGET, 0xA, ConvertID($aTarget))
+	Local $lTargetID
+
+	If IsDllStruct($aTarget) = 0 Then
+		$lTargetID = ConvertID($aTarget)
+	Else
+		$lTargetID = DllStructGetData($aTarget, 'ID')
+	EndIf
+
+	Return SendPacket(0xC, $HEADER_CALL_TARGET, 0xA, $lTargetID)
 EndFunc   ;==>CallTarget
 
 ;~ Description: Clear current target.
@@ -1965,54 +1842,14 @@ EndFunc   ;==>TargetPreviousPartyMember
 
 #Region Display
 ;~ Description: Enable graphics rendering.
-Func EnableRendering($aShowWindow = True)
-	Local $lWindowHandle = GetWindowHandle(), $lPrevGWState = WinGetState($lWindowHandle), $lPrevWindow = WinGetHandle("[ACTIVE]", ""), $lPrevWindowState = WinGetState($lPrevWindow)
-	If $aShowWindow And $lPrevGWState Then
-		If BitAND($lPrevGWState, 16) Then
-			WinSetState($lWindowHandle, "", @SW_RESTORE)
-		ElseIf Not BitAND($lPrevGWState, 2) Then
-			WinSetState($lWindowHandle, "", @SW_SHOW)
-		EndIf
-		If $lWindowHandle <> $lPrevWindow And $lPrevWindow Then RestoreWindowState($lPrevWindow, $lPrevWindowState)
-	EndIf
-	If Not GetIsRendering() Then
-		$mRendering = True
-		If Not MemoryWrite($mDisableRendering, 0) Then Return SetError(@error, False)
-		Sleep(250)
-	EndIf
-	Return 1
+Func EnableRendering()
+	MemoryWrite($mDisableRendering, 0)
 EndFunc   ;==>EnableRendering
 
 ;~ Description: Disable graphics rendering.
-Func DisableRendering($aHideWindow = True)
-	Local $lWindowHandle = GetWindowHandle()
-	If $aHideWindow And WinGetState($lWindowHandle) Then WinSetState($lWindowHandle, "", @SW_HIDE)
-	If GetIsRendering() Then
-		$mRendering = True
-		If Not MemoryWrite($mDisableRendering, 1) Then Return SetError(@error, False)
-		Sleep(250)
-	EndIf
-	Return 1
+Func DisableRendering()
+	MemoryWrite($mDisableRendering, 1)
 EndFunc   ;==>DisableRendering
-
-;Toggles graphics rendering
-Func ToggleRendering()
-	Return GetIsRendering() ? DisableRendering() : EnableRendering()
-EndFunc   ;==>ToggleRendering
-
-Func GetIsRendering()
-	Return MemoryRead($mDisableRendering) <> 1
-EndFunc   ;==>GetIsRendering
-
-;Internally used - restores a window to previous state.
-Func RestoreWindowState($aWindowHandle, $aPreviousWindowState)
-	If Not $aWindowHandle Or Not $aPreviousWindowState Then Return 0
-
-	Local $lStates[6] = [1, 2, 4, 8, 16, 32], $lCurrentWindowState = WinGetState($aWindowHandle)
-	For $i = 0 To UBound($lStates) - 1
-		If BitAND($aPreviousWindowState, $lStates[$i]) And Not BitAND($lCurrentWindowState, $lStates[$i]) Then WinSetState($aWindowHandle, "", $lStates[$i])
-	Next
-EndFunc   ;==>RestoreWindowState
 
 ;~ Description: Display all names.
 Func DisplayAll($aDisplay)
@@ -2041,7 +1878,7 @@ EndFunc   ;==>DisplayEnemies
 
 #Region Chat
 ;~ Description: Write a message in chat (can only be seen by botter).
-Func WriteChat($aMessage, $aSender = 'GWA2')
+Func WriteChat($aMessage, $aSender = 'GWA�')
 	Local $lMessage, $lSender
 	Local $lAddress = 256 * $mQueueCounter + $mQueueBase
 
@@ -2106,21 +1943,27 @@ Func SendChat($aMessage, $aChannel = '!')
 
 	MemoryWrite($lAddress + 12, $aChannel & $lMessage, 'wchar[122]')
 	DllCall($mKernelHandle, 'int', 'WriteProcessMemory', 'int', $mGWProcHandle, 'int', $lAddress, 'ptr', $mSendChatPtr, 'int', 8, 'int', '')
-
-	If StringLen($aMessage) > 120 Then SendChat(StringTrimLeft($aMessage, 120), $aChannel)
 EndFunc   ;==>SendChat
 #EndRegion Chat
 
 #Region Misc
 ;~ Description: Change weapon sets.
 Func ChangeWeaponSet($aSet)
-	Return PerformAction(0x80 + $aSet, 0x1E) ;Return PerformAction(0x80 + $aSet, 0x1E) 0x14A
+	Return PerformAction(0x80 + $aSet, 0x1E)
 EndFunc   ;==>ChangeWeaponSet
 
 ;~ Description: Use a skill.
 Func UseSkill($aSkillSlot, $aTarget, $aCallTarget = False)
+	Local $lTargetID
+
+	If IsDllStruct($aTarget) = 0 Then
+		$lTargetID = ConvertID($aTarget)
+	Else
+		$lTargetID = DllStructGetData($aTarget, 'ID')
+	EndIf
+
 	DllStructSetData($mUseSkill, 2, $aSkillSlot)
-	DllStructSetData($mUseSkill, 3, ConvertID($aTarget))
+	DllStructSetData($mUseSkill, 3, $lTargetID)
 	DllStructSetData($mUseSkill, 4, $aCallTarget)
 	Enqueue($mUseSkillPtr, 16)
 EndFunc   ;==>UseSkill
@@ -2141,30 +1984,13 @@ Func UseSkillEx($lSkill, $lTgt = -2, $aTimeout = 3000)
 	Sleep($lAftercast * 1000)
 EndFunc   ;==>UseSkillEx
 
-Func CustomUseSkillEx($lSkill, $lTgt = -2, $aTimeout = 3000)
-	If GetIsDead(-2) Then Return
-	If GetIsDead($lTgt) Then Return
-;~ 	If Not IsRecharged($lSkill) Then Return
-	Local $Skill = GetSkillByID(GetSkillbarSkillID($lSkill, 0))
-	Local $Energy = StringReplace(StringReplace(StringReplace(StringMid(DllStructGetData($Skill, 'Unknown4'), 6, 1), 'C', '25'), 'B', '15'), 'A', '10')
-	If GetEnergy(-2) < $Energy Then Return
-;~ 	Local $lAftercast = DllStructGetData($Skill, 'Aftercast')
-;~ 	Local $lDeadlock = TimerInit()
-	UseSkill($lSkill, $lTgt)
-;~ 	Do
-	Sleep(50)
-;~ 		If GetIsDead(-2) = 1 Then Return
-;~ 	Until (Not IsRecharged($lSkill)) Or (TimerDiff($lDeadlock) > $aTimeout)
-;~ 	Sleep($lAftercast * 1000)
-EndFunc   ;==>CustomUseSkillEx
-
 Func IsRecharged($lSkill)
 	Return GetSkillbarSkillRecharge($lSkill) == 0
 EndFunc   ;==>IsRecharged
 
 ;~ Description: Cancel current action.
 Func CancelAction()
-	Return SendPacket(0x4, $HEADER_ACTION_CANCEL)
+	Return SendPacket(0x4, $HEADER_CANCEL_ACTION)
 EndFunc   ;==>CancelAction
 
 ;~ Description: Same as hitting spacebar.
@@ -2196,38 +2022,43 @@ Func SuppressAction($aSuppress)
 	EndIf
 EndFunc   ;==>SuppressAction
 
+;~ Description: Open a chest.
+Func OpenChest()
+	Return SendPacket(0x8, $HEADER_CHEST_OPEN, 2)
+EndFunc   ;==>OpenChest
+
 ;~ Description: Stop maintaining enchantment on target.
 Func DropBuff($aSkillID, $aAgentID, $aHeroNumber = 0)
-    Local $lBuffCount = GetBuffCount($aHeroNumber)
-    Local $lBuffStructAddress
-    Local $lOffset[4]
-    $lOffset[0] = 0
-    $lOffset[1] = 0x18
-    $lOffset[2] = 0x2C
-    $lOffset[3] = 0x510
-    Local $lCount = MemoryReadPtr($mBasePointer, $lOffset)
-    ReDim $lOffset[5]
-    $lOffset[3] = 0x508
-    Local $lBuffer
-
-    For $i = 0 To $lCount[1] - 1
-        $lOffset[4] = 0x24 * $i
-        $lBuffer = MemoryReadPtr($mBasePointer, $lOffset)
-        If $lBuffer[1] == GetHeroID($aHeroNumber) Then
-            $lOffset[4] = 0x4 + 0x24 * $i
-            ReDim $lOffset[6]
-            For $j = 0 To $lBuffCount - 1
-                $lOffset[5] = 0 + 0x10 * $j
-                $lBuffStructAddress = MemoryReadPtr($mBasePointer, $lOffset)
-                DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $lBuffStructAddress[0], 'ptr', DllStructGetPtr($g_BuffStruct), 'int', DllStructGetSize($g_BuffStruct), 'int', '')
-
-                If (DllStructGetData($g_BuffStruct, 'SkillID') == $aSkillID) And (DllStructGetData($g_BuffStruct, 'TargetId') == ConvertID($aAgentID)) Then
-                    Return SendPacket(0x8, $HEADER_BUFF_DROP, DllStructGetData($g_BuffStruct, 'BuffId'))
-                    ExitLoop 2
-                EndIf
-            Next
-        EndIf
-    Next
+	Local $lBuffStruct = DllStructCreate('long SkillId;byte unknown1[4];long BuffId;long TargetId')
+	Local $lBuffCount = GetBuffCount($aHeroNumber)
+	Local $lBuffStructAddress
+	Local $lOffset[4]
+	$lOffset[0] = 0
+	$lOffset[1] = 0x18
+	$lOffset[2] = 0x2C
+	$lOffset[3] = 0x510
+	Local $lCount = MemoryReadPtr($mBasePointer, $lOffset)
+	ReDim $lOffset[5]
+	$lOffset[3] = 0x508
+	Local $lBuffer
+	For $i = 0 To $lCount[1] - 1
+		$lOffset[4] = 0x24 * $i
+		$lBuffer = MemoryReadPtr($mBasePointer, $lOffset)
+		If $lBuffer[1] == GetHeroID($aHeroNumber) Then
+			$lOffset[4] = 0x4 + 0x24 * $i
+			ReDim $lOffset[6]
+			For $j = 0 To $lBuffCount - 1
+				$lOffset[5] = 0 + 0x10 * $j
+				$lBuffStructAddress = MemoryReadPtr($mBasePointer, $lOffset)
+				DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $lBuffStructAddress[0], 'ptr', DllStructGetPtr($lBuffStruct), 'int', DllStructGetSize($lBuffStruct), 'int', '')
+				If (DllStructGetData($lBuffStruct, 'SkillID') == $aSkillID) And (DllStructGetData($lBuffStruct, 'TargetId') == ConvertID($aAgentID)) Then
+					out(DllStructGetData($lBuffStruct, 'BuffId'))
+					Return SendPacket(0x8, $HEADER_STOP_MAINTAIN_ENCH, DllStructGetData($lBuffStruct, 'BuffId'))
+					ExitLoop 2
+				EndIf
+			Next
+		EndIf
+	Next
 EndFunc   ;==>DropBuff
 
 ;~ Description: Take a screenshot.
@@ -2243,12 +2074,12 @@ EndFunc   ;==>InvitePlayer
 ;~ Description: Leave your party.
 Func LeaveGroup($aKickHeroes = True)
 	If $aKickHeroes Then KickAllHeroes()
-	Return SendPacket(0x4, $HEADER_PARTY_LEAVE_GROUP)
+	Return SendPacket(0x4, $HEADER_PARTY_LEAVE)
 EndFunc   ;==>LeaveGroup
 
 ;~ Description: Switches to/from Hard Mode.
 Func SwitchMode($aMode)
-	Return SendPacket(0x8, $HEADER_PARTY_SET_DIFFICULTY, $aMode)
+	Return SendPacket(0x8, $HEADER_MODE_SWITCH, $aMode)
 EndFunc   ;==>SwitchMode
 
 ;~ Description: Resign.
@@ -2259,40 +2090,16 @@ EndFunc   ;==>Resign
 ;~ Description: Donate Kurzick or Luxon faction.
 Func DonateFaction($aFaction)
 	If StringLeft($aFaction, 1) = 'k' Then
-		Return SendPacket(0x10, $HEADER_FACTION_DEPOSIT, 0, 0, 5000)
+		Return SendPacket(0x10, $HEADER_FACTION_DONATE, 0, 0, 5000)
 	Else
-		Return SendPacket(0x10, $HEADER_FACTION_DEPOSIT, 0, 1, 5000)
+		Return SendPacket(0x10, $HEADER_FACTION_DONATE, 0, 1, 5000)
 	EndIf
 EndFunc   ;==>DonateFaction
 
 ;~ Description: Open a dialog.
 Func Dialog($aDialogID)
-	Return SendPacket(0x8, $HEADER_DIALOG_SEND, $aDialogID)
+	Return SendPacket(0x8, $HEADER_DIALOG, $aDialogID)
 EndFunc   ;==>Dialog
-
-;~ Description: Open a dialog - Records your dialog entry
-Func _Dialog($aDialogID)
-	;_LogDialogID($aDialogID, $aAgent)
-	Return SendPacket(0x8, $HEADER_DIALOG_SEND, $aDialogID)
-EndFunc   ;==>_Dialog
-
-;~ Description: Logs the given dialog ID, current map ID, and agent ID to a text file.
-Func _LogDialogID($aDialogID, $aAgent)
-	Local $sFilePath = @ScriptDir & "\DialogLog.txt"
-	Local $hFile = FileOpen($sFilePath, 1)
-	Local $mapID = GetMapID()
-	Local $agentID = GetAgentInfo($aAgent, 'ID')
-
-	If $hFile = -1 Then
-		MsgBox(0, "Error", "Failed to open log file.")
-		Return False
-	EndIf
-
-	FileWriteLine($hFile, "Dialog ID: " & $aDialogID & ", Map ID: " & $mapID & ", Agent ID: " & $agentID)
-	FileClose($hFile)
-
-	Return True
-EndFunc   ;==>_LogDialogID
 
 ;~ Description: Skip a cinematic.
 Func SkipCinematic()
@@ -2301,17 +2108,18 @@ EndFunc   ;==>SkipCinematic
 
 ;~ Description: Change a skill on the skillbar.
 Func SetSkillbarSkill($aSlot, $aSkillID, $aHeroNumber = 0)
-	Return SendPacket(0x14, $HEADER_SKILLBAR_SKILL_SET, GetHeroID($aHeroNumber), $aSlot - 1, $aSkillID, 0)
+	Return SendPacket(0x14, $HEADER_SET_SKILLBAR_SKILL, GetHeroID($aHeroNumber), $aSlot - 1, $aSkillID, 0)
 EndFunc   ;==>SetSkillbarSkill
 
 ;~ Description: Load all skills onto a skillbar simultaneously.
 Func LoadSkillBar($aSkill1 = 0, $aSkill2 = 0, $aSkill3 = 0, $aSkill4 = 0, $aSkill5 = 0, $aSkill6 = 0, $aSkill7 = 0, $aSkill8 = 0, $aHeroNumber = 0)
-	SendPacket(0x2C, $HEADER_SKILLBAR_LOAD, GetHeroID($aHeroNumber), 8, $aSkill1, $aSkill2, $aSkill3, $aSkill4, $aSkill5, $aSkill6, $aSkill7, $aSkill8)
+	SendPacket(0x2C, $HEADER_LOAD_SKILLBAR, GetHeroID($aHeroNumber), 8, $aSkill1, $aSkill2, $aSkill3, $aSkill4, $aSkill5, $aSkill6, $aSkill7, $aSkill8)
 EndFunc   ;==>LoadSkillBar
 
+;~ Description: Loads skill template code.
 Func LoadSkillTemplate($aTemplate, $aHeroNumber = 0)
 	Local $lHeroID = GetHeroID($aHeroNumber)
-	Local $lSplitTemplate = StringSplit($aTemplate, '')
+	Local $lSplitTemplate = StringSplit($aTemplate, "")
 
 	Local $lTemplateType ; 4 Bits
 	Local $lVersionNumber ; 4 Bits
@@ -2325,7 +2133,7 @@ Func LoadSkillTemplate($aTemplate, $aHeroNumber = 0)
 	Local $lSkills[8] ; S Bits * 8
 	Local $lOpTail ; 1 Bit
 
-	$aTemplate = ''
+	$aTemplate = ""
 	For $i = 1 To $lSplitTemplate[0]
 		$aTemplate &= Base64ToBin64($lSplitTemplate[$i])
 	Next
@@ -2380,17 +2188,16 @@ Func LoadSkillTemplate($aTemplate, $aHeroNumber = 0)
 	$lOpTail = Bin64ToDec($aTemplate)
 
 	$lAttributes[0][0] = $lProfSecondary
-	LoadAttributes($lAttributes, $aHeroNumber)
+	If $aHeroNumber == 0 Then LoadAttributes($lAttributes, $aHeroNumber)
 	LoadSkillBar($lSkills[0], $lSkills[1], $lSkills[2], $lSkills[3], $lSkills[4], $lSkills[5], $lSkills[6], $lSkills[7], $aHeroNumber)
 EndFunc   ;==>LoadSkillTemplate
 
 ;~ Description: Load attributes from a two dimensional array.
 Func LoadAttributes($aAttributesArray, $aHeroNumber = 0)
 	Local $lPrimaryAttribute
-	Local $lDeadlock = 0
+	Local $lDeadlock
 	Local $lHeroID = GetHeroID($aHeroNumber)
 	Local $lLevel
-	Local $TestTimer = 0
 
 	$lPrimaryAttribute = GetProfPrimaryAttribute(GetHeroProfession($aHeroNumber))
 
@@ -2399,9 +2206,9 @@ Func LoadAttributes($aAttributesArray, $aHeroNumber = 0)
 			$lDeadlock = TimerInit()
 			ChangeSecondProfession($aAttributesArray[0][0], $aHeroNumber)
 			Do
-				Sleep(16)
+				Sleep(20)
 			Until GetHeroProfession($aHeroNumber, True) == $aAttributesArray[0][0] Or TimerDiff($lDeadlock) > 5000
-		Until GetHeroProfession($aHeroNumber, True) == $aAttributesArray[0][0] Or TimerDiff($lDeadlock) > 10000
+		Until GetHeroProfession($aHeroNumber, True) == $aAttributesArray[0][0]
 	EndIf
 
 	$aAttributesArray[0][0] = $lPrimaryAttribute
@@ -2415,9 +2222,9 @@ Func LoadAttributes($aAttributesArray, $aHeroNumber = 0)
 		$lDeadlock = TimerInit()
 		DecreaseAttribute($lPrimaryAttribute, $aHeroNumber)
 		Do
-			Sleep(16)
+			Sleep(20)
 		Until GetAttributeByID($lPrimaryAttribute, False, $aHeroNumber) < $lLevel Or TimerDiff($lDeadlock) > 5000
-		Sleep(16)
+		TolSleep()
 	WEnd
 	For $i = 1 To UBound($aAttributesArray) - 1
 		While GetAttributeByID($aAttributesArray[$i][0], False, $aHeroNumber) > $aAttributesArray[$i][1]
@@ -2425,53 +2232,48 @@ Func LoadAttributes($aAttributesArray, $aHeroNumber = 0)
 			$lDeadlock = TimerInit()
 			DecreaseAttribute($aAttributesArray[$i][0], $aHeroNumber)
 			Do
-				Sleep(16)
+				Sleep(20)
 			Until GetAttributeByID($aAttributesArray[$i][0], False, $aHeroNumber) < $lLevel Or TimerDiff($lDeadlock) > 5000
-			Sleep(16)
+			TolSleep()
 		WEnd
 	Next
 	For $i = 0 To 44
 		If GetAttributeByID($i, False, $aHeroNumber) > 0 Then
 			If $i = $lPrimaryAttribute Then ContinueLoop
-			For $J = 1 To UBound($aAttributesArray) - 1
-				If $i = $aAttributesArray[$J][0] Then ContinueLoop 2
+			For $j = 1 To UBound($aAttributesArray) - 1
+				If $i = $aAttributesArray[$j][0] Then ContinueLoop 2
+				Local $lDummy ;AutoIt 3.8.8.0 Bug
 			Next
 			While GetAttributeByID($i, False, $aHeroNumber) > 0
 				$lLevel = GetAttributeByID($i, False, $aHeroNumber)
 				$lDeadlock = TimerInit()
 				DecreaseAttribute($i, $aHeroNumber)
 				Do
-					Sleep(16)
+					Sleep(20)
 				Until GetAttributeByID($i, False, $aHeroNumber) < $lLevel Or TimerDiff($lDeadlock) > 5000
-				Sleep(16)
+				TolSleep()
 			WEnd
 		EndIf
 	Next
 
-	$TestTimer = 0
 	While GetAttributeByID($lPrimaryAttribute, False, $aHeroNumber) < $aAttributesArray[0][1]
 		$lLevel = GetAttributeByID($lPrimaryAttribute, False, $aHeroNumber)
 		$lDeadlock = TimerInit()
 		IncreaseAttribute($lPrimaryAttribute, $aHeroNumber)
 		Do
-			Sleep(16)
-			$TestTimer = $TestTimer + 1
+			Sleep(20)
 		Until GetAttributeByID($lPrimaryAttribute, False, $aHeroNumber) > $lLevel Or TimerDiff($lDeadlock) > 5000
-		Sleep(16)
-		If $TestTimer > 225 Then ExitLoop
+		TolSleep()
 	WEnd
 	For $i = 1 To UBound($aAttributesArray) - 1
-		$TestTimer = 0
 		While GetAttributeByID($aAttributesArray[$i][0], False, $aHeroNumber) < $aAttributesArray[$i][1]
 			$lLevel = GetAttributeByID($aAttributesArray[$i][0], False, $aHeroNumber)
 			$lDeadlock = TimerInit()
 			IncreaseAttribute($aAttributesArray[$i][0], $aHeroNumber)
 			Do
-				Sleep(16)
-				$TestTimer = $TestTimer + 1
+				Sleep(20)
 			Until GetAttributeByID($aAttributesArray[$i][0], False, $aHeroNumber) > $lLevel Or TimerDiff($lDeadlock) > 5000
-			Sleep(16)
-			If $TestTimer > 225 Then ExitLoop
+			TolSleep()
 		WEnd
 	Next
 EndFunc   ;==>LoadAttributes
@@ -2493,7 +2295,7 @@ EndFunc   ;==>DecreaseAttribute
 ;~ Description: Set all attributes to 0
 Func ClearAttributes($aHeroNumber = 0)
 	Local $lLevel
-	If GetInstanceType() <> 0 Then Return
+	If GetMapLoading() <> 0 Then Return
 	For $i = 0 To 44
 		If GetAttributeByID($i, False, $aHeroNumber) > 0 Then
 			Do
@@ -2511,7 +2313,7 @@ EndFunc   ;==>ClearAttributes
 
 ;~ Description: Change your secondary profession.
 Func ChangeSecondProfession($aProfession, $aHeroNumber = 0)
-	Return SendPacket(0xC, $HEADER_PROFESSION_CHANGE, GetHeroID($aHeroNumber), $aProfession)
+	Return SendPacket(0xC, $HEADER_CHANGE_SECONDARY, GetHeroID($aHeroNumber), $aProfession)
 EndFunc   ;==>ChangeSecondProfession
 
 ;~ Description: Sets value of GetMapIsLoaded() to 0.
@@ -2572,76 +2374,6 @@ EndFunc   ;==>FloatToInt
 
 #Region Queries
 #Region Titles
-
-; Constants for title identifiers
-Global Const $NO_TITLE = 0x00
-Global Const $SPEARMARSHALL = 0x11
-Global Const $LIGHTBRINGER = 0x14
-Global Const $ASURAN = 0x26
-Global Const $DWARVEN = 0x27
-Global Const $EBON_VANGUARD = 0x28
-Global Const $NORN = 0x29
-
-Func SetDisplayedTitle($aTitle = 0)
-;~ If $aTitle Then
-;~ 	Return SendPacket(0x8, $HEADER_TITLE_DISPLAY, $aTitle)
-;~ Else
-;~ 	Return SendPacket(0x4, $HEADER_TITLE_CLEAR)
-;~ EndIf
-;~ No Title = 0x00
-;~ Spearmarshall = 0x11
-;~ Lightbringer = 0x14
-;~ Asuran = 0x26
-;~ Dwarven = 0x27
-;~ Ebon Vanguard = 0x28
-;~ Norn = 0x29
-EndFunc   ;==>SetDisplayedTitle
-
-;Func SetTitleUpdate($aTitle = 0)
-;   If $aTitle Then
-;      Return SendPacket(0x8, $HEADER_TITLE_UPDATE, $aTitle)
-; Else
-;    Return SendPacket(0x4, $HEADER_TITLE_UPDATE)
-;EndIf
-;~ No Title = 0x00
-;~ Spearmarshall = 0x11
-;~ Lightbringer = 0x14
-;~ Asuran = 0x26
-;~ Dwarven = 0x27
-;~ Ebon Vanguard = 0x28
-;~ Norn = 0x29
-;EndFunc   ;==>SetTitleUpdate
-
-; Function to set the title to Spearmarshall
-Func SetTitleSpearmarshall()
-    SendPacket(0x8, $HEADER_TITLE_DISPLAY, $SPEARMARSHALL)
-EndFunc
-
-; Function to set the title to Lightbringer
-Func SetTitleLightbringer()
-    SendPacket(0x8, $HEADER_TITLE_DISPLAY, $LIGHTBRINGER)
-EndFunc
-
-; Function to set the title to Asuran
-Func SetTitleAsuran()
-    SendPacket(0x8, $HEADER_TITLE_DISPLAY, $ASURAN)
-EndFunc
-
-; Function to set the title to Dwarven
-Func SetTitleDwarven()
-    SendPacket(0x8, $HEADER_TITLE_DISPLAY, $DWARVEN)
-EndFunc
-
-; Function to set the title to Ebon Vanguard
-Func SetTitleEbonVanguard()
-    SendPacket(0x8, $HEADER_TITLE_DISPLAY, $EBON_VANGUARD)
-EndFunc
-
-; Function to set the title to Norn
-Func SetTitleNorn()
-    SendPacket(0x8, $HEADER_TITLE_DISPLAY, $NORN)
-EndFunc
-
 ;~ Description: Returns Hero title progress.
 Func GetHeroTitle()
 	Local $lOffset[5] = [0, 0x18, 0x2C, 0x81C, 0x4]
@@ -2656,7 +2388,6 @@ Func GetGladiatorTitle()
 	Return $lReturn[1]
 EndFunc   ;==>GetGladiatorTitle
 
-;~ Description: Returns Codex title progress.
 Func GetCodexTitle()
 	Local $lOffset[5] = [0, 0x18, 0x2C, 0x81C, 0x75C]
 	Local $lReturn = MemoryReadPtr($mBasePointer, $lOffset)
@@ -2816,13 +2547,6 @@ Func GetWisdomTitle()
 	Local $lReturn = MemoryReadPtr($mBasePointer, $lOffset)
 	Return $lReturn[1]
 EndFunc   ;==>GetWisdomTitle
-
-;~ Description: Returns current Tournament points.
-Func GetTournamentPoints()
-	Local $lOffset[5] = [0, 0x18, 0x2C, 0, 0x18]
-	Local $lReturn = MemoryReadPtr($mBasePointer, $lOffset)
-	Return $lReturn[1]
-EndFunc   ;==>GetTournamentPoints
 #EndRegion Titles
 
 #Region Faction
@@ -2892,29 +2616,11 @@ Func GetRarity($aItem)
 	Return MemoryRead($lPtr, 'ushort')
 EndFunc   ;==>GetRarity
 
-;~ Description: Legacy function, use GetIsIdentified instead.
-Func GetIsIDed($aItem)
-	Return GetIsIdentified($aItem)
-EndFunc   ;==>GetIsIDed
-
 ;~ Description: Tests if an item is identified.
-Func GetIsIdentified($aItem)
+Func GetIsIDed($aItem)
 	If Not IsDllStruct($aItem) Then $aItem = GetItemByItemID($aItem)
-	Return (BitAND(DllStructGetData($aItem, 'Interaction'), 1) > 0)
-EndFunc   ;==>GetIsIdentified
-
-;~ Description: Returns if material is Rare.
-Func GetIsRareMaterial($aItem)
-	If Not IsDllStruct($aItem) Then $aItem = GetItemByItemID($aItem)
-	If DllStructGetData($aItem, "Type") <> 11 Then Return False
-	Return Not GetIsCommonMaterial($aItem)
-EndFunc   ;==>GetIsRareMaterial
-
-;~ Description: Returns if material is Common.
-Func GetIsCommonMaterial($aItem)
-	If Not IsDllStruct($aItem) Then $aItem = GetItemByItemID($aItem)
-	Return BitAND(DllStructGetData($aItem, "Interaction"), 0x20) <> 0
-EndFunc   ;==>GetIsCommonMaterial
+	Return BitAND(DllStructGetData($aItem, 'interaction'), 1) > 0
+EndFunc   ;==>GetIsIDed
 
 ;~ Description: Returns a weapon or shield's minimum required attribute.
 Func GetItemReq($aItem)
@@ -2952,12 +2658,14 @@ EndFunc   ;==>GetModStruct
 
 ;~ Description: Tests if an item is assigned to you.
 Func GetAssignedToMe($aAgent)
-	Return (GetAgentInfo($aAgent, 'Owner') = GetMyID())
+	If IsDllStruct($aAgent) = 0 Then $aAgent = GetAgentByID($aAgent)
+	Return (DllStructGetData($aAgent, 'Owner') = GetMyID())
 EndFunc   ;==>GetAssignedToMe
 
 ;~ Description: Tests if you can pick up an item.
 Func GetCanPickUp($aAgent)
-	If GetAssignedToMe($aAgent) Or GetAgentInfo($aAgent, 'Owner') = 0 Then
+	If IsDllStruct($aAgent) = 0 Then $aAgent = GetAgentByID($aAgent)
+	If GetAssignedToMe($aAgent) Or DllStructGetData($aAgent, 'Owner') = 0 Then
 		Return True
 	Else
 		Return False
@@ -2966,22 +2674,22 @@ EndFunc   ;==>GetCanPickUp
 
 ;~ Description: Returns struct of an inventory bag.
 Func GetBag($aBag)
-    Local $lOffset[5] = [0, 0x18, 0x40, 0xF8, 0x4 * $aBag]
-    Local $lBagPtr = MemoryReadPtr($mBasePointer, $lOffset)
-
-    If $lBagPtr[1] = 0 Then Return
-
-    DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $lBagPtr[1], 'ptr', DllStructGetPtr($g_BagStruct), 'int', DllStructGetSize($g_BagStruct), 'int', '')
-
-    Return $g_BagStruct
+	Local $lOffset[5] = [0, 0x18, 0x40, 0xF8, 0x4 * $aBag]
+	Local $lBagStruct = DllStructCreate('byte unknown1[4];long index;long id;ptr containerItem;long ItemsCount;ptr bagArray;ptr itemArray;long fakeSlots;long slots')
+	Local $lBagPtr = MemoryReadPtr($mBasePointer, $lOffset)
+	If $lBagPtr[1] = 0 Then Return
+	DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $lBagPtr[1], 'ptr', DllStructGetPtr($lBagStruct), 'int', DllStructGetSize($lBagStruct), 'int', '')
+	Return $lBagStruct
 EndFunc   ;==>GetBag
 
 ;~ Description: Returns item by slot.
 Func GetItemBySlot($aBag, $aSlot)
+	Local $lBag
+
 	If IsDllStruct($aBag) = 0 Then
-		Local $lBag = GetBag($aBag)
+		$lBag = GetBag($aBag)
 	Else
-		Local $lBag = $aBag
+		$lBag = $aBag
 	EndIf
 
 	Local $lItemPtr = DllStructGetData($lBag, 'ItemArray')
@@ -2992,69 +2700,54 @@ Func GetItemBySlot($aBag, $aSlot)
 	Return $lItemStruct
 EndFunc   ;==>GetItemBySlot
 
+;~ Description: Returns item struct.
+Func GetItemByItemID($aItemID)
+;~ 	Local $lItemStruct = DllStructCreate('long id;long agentId;byte unknown1[4];ptr bag;ptr modstruct;long modstructsize;ptr customized;byte unknown2[4];byte type;byte unknown3;short extraId;short value;byte unknown4[2];short interaction;long modelId;ptr modString;byte unknown5[4];ptr NameString;byte unknown6[15];byte quantity;byte equipped;byte unknown7[1];byte slot')
+	Local $lItemStruct = DllStructCreate('long Id;long AgentId;byte Unknown1[4];ptr Bag;ptr ModStruct;long ModStructSize;ptr Customized;byte unknown2[4];byte Type;byte unknown4;short ExtraId;short Value;byte unknown4[2];short Interaction;long ModelId;ptr ModString;byte unknown5[4];ptr NameString;ptr SingleItemName;byte Unknown4[10];byte IsSalvageable;byte Unknown6;byte Quantity;byte Equiped;byte Profession;byte Type2;byte Slot')
+	Local $lOffset[5] = [0, 0x18, 0x40, 0xB8, 0x4 * $aItemID]
+	Local $lItemPtr = MemoryReadPtr($mBasePointer, $lOffset)
+	DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $lItemPtr[1], 'ptr', DllStructGetPtr($lItemStruct), 'int', DllStructGetSize($lItemStruct), 'int', '')
+	Return $lItemStruct
+EndFunc   ;==>GetItemByItemID
+
 ;~ Description: Returns item by agent ID.
 Func GetItemByAgentID($aAgentID)
-    Local $lOffset[4] = [0, 0x18, 0x40, 0xC0]
-    Local $lItemArraySize = MemoryReadPtr($mBasePointer, $lOffset)
-    Local $lOffset[5] = [0, 0x18, 0x40, 0xB8, 0]
-    Local $lItemPtr, $lItemID
-    Local $lAgentID = ConvertID($aAgentID)
+;~ 	Local $lItemStruct = DllStructCreate('long id;long agentId;byte unknown1[4];ptr bag;ptr modstruct;long modstructsize;ptr customized;byte unknown2[4];byte type;byte unknown3;short extraId;short value;byte unknown4[2];short interaction;long modelId;ptr modString;byte unknown5[4];ptr NameString;byte unknown6[15];byte quantity;byte equipped;byte unknown7[1];byte slot')
+	Local $lItemStruct = DllStructCreate('long Id;long AgentId;byte Unknown1[4];ptr Bag;ptr ModStruct;long ModStructSize;ptr Customized;byte unknown2[4];byte Type;byte unknown4;short ExtraId;short Value;byte unknown4[2];short Interaction;long ModelId;ptr ModString;byte unknown5[4];ptr NameString;ptr SingleItemName;byte Unknown4[10];byte IsSalvageable;byte Unknown6;byte Quantity;byte Equiped;byte Profession;byte Type2;byte Slot')
+	Local $lOffset[4] = [0, 0x18, 0x40, 0xC0]
+	Local $lItemArraySize = MemoryReadPtr($mBasePointer, $lOffset)
+	Local $lOffset[5] = [0, 0x18, 0x40, 0xB8, 0]
+	Local $lItemPtr, $lItemID
+	Local $lAgentID = ConvertID($aAgentID)
 
-    For $lItemID = 1 To $lItemArraySize[1]
-        $lOffset[4] = 0x4 * $lItemID
-        $lItemPtr = MemoryReadPtr($mBasePointer, $lOffset)
-        If $lItemPtr[1] = 0 Then ContinueLoop
+	For $lItemID = 1 To $lItemArraySize[1]
+		$lOffset[4] = 0x4 * $lItemID
+		$lItemPtr = MemoryReadPtr($mBasePointer, $lOffset)
+		If $lItemPtr[1] = 0 Then ContinueLoop
 
-        DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $lItemPtr[1], 'ptr', DllStructGetPtr($g_ItemStruct), 'int', DllStructGetSize($g_ItemStruct), 'int', '')
-        If DllStructGetData($g_ItemStruct, 'AgentID') = $lAgentID Then Return $g_ItemStruct
-    Next
+		DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $lItemPtr[1], 'ptr', DllStructGetPtr($lItemStruct), 'int', DllStructGetSize($lItemStruct), 'int', '')
+		If DllStructGetData($lItemStruct, 'AgentID') = $lAgentID Then Return $lItemStruct
+	Next
 EndFunc   ;==>GetItemByAgentID
 
 ;~ Description: Returns item by model ID.
 Func GetItemByModelID($aModelID)
-    Local $lOffset[4] = [0, 0x18, 0x40, 0xC0]
-    Local $lItemArraySize = MemoryReadPtr($mBasePointer, $lOffset)
-    Local $lOffset[5] = [0, 0x18, 0x40, 0xB8, 0]
-    Local $lItemPtr, $lItemID
+;~ 	Local $lItemStruct = DllStructCreate('long id;long agentId;byte unknown1[4];ptr bag;ptr modstruct;long modstructsize;ptr customized;byte unknown2[4];byte type;byte unknown3;short extraId;short value;byte unknown4[2];short interaction;long modelId;ptr modString;byte unknown5[4];ptr NameString;byte unknown6[15];byte quantity;byte equipped;byte unknown7[1];byte slot')
+	Local $lItemStruct = DllStructCreate('long Id;long AgentId;byte Unknown1[4];ptr Bag;ptr ModStruct;long ModStructSize;ptr Customized;byte unknown2[4];byte Type;byte unknown4;short ExtraId;short Value;byte unknown4[2];short Interaction;long ModelId;ptr ModString;byte unknown5[4];ptr NameString;ptr SingleItemName;byte Unknown4[10];byte IsSalvageable;byte Unknown6;byte Quantity;byte Equiped;byte Profession;byte Type2;byte Slot')
+	Local $lOffset[4] = [0, 0x18, 0x40, 0xC0]
+	Local $lItemArraySize = MemoryReadPtr($mBasePointer, $lOffset)
+	Local $lOffset[5] = [0, 0x18, 0x40, 0xB8, 0]
+	Local $lItemPtr, $lItemID
 
-    For $lItemID = 1 To $lItemArraySize[1]
-        $lOffset[4] = 0x4 * $lItemID
-        $lItemPtr = MemoryReadPtr($mBasePointer, $lOffset)
-        If $lItemPtr[1] = 0 Then ContinueLoop
+	For $lItemID = 1 To $lItemArraySize[1]
+		$lOffset[4] = 0x4 * $lItemID
+		$lItemPtr = MemoryReadPtr($mBasePointer, $lOffset)
+		If $lItemPtr[1] = 0 Then ContinueLoop
 
-        DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $lItemPtr[1], 'ptr', DllStructGetPtr($g_ItemStruct), 'int', DllStructGetSize($g_ItemStruct), 'int', '')
-        If DllStructGetData($g_ItemStruct, 'ModelID') = $aModelID Then Return $g_ItemStruct
-    Next
+		DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $lItemPtr[1], 'ptr', DllStructGetPtr($lItemStruct), 'int', DllStructGetSize($lItemStruct), 'int', '')
+		If DllStructGetData($lItemStruct, 'ModelID') = $aModelID Then Return $lItemStruct
+	Next
 EndFunc   ;==>GetItemByModelID
-
-;~ Description: Returns item struct.
-Func GetItemByItemID($aItemID)
-    Local $lOffset[5] = [0, 0x18, 0x40, 0xB8, 0x4 * $aItemID]
-    Local $lItemPtr = MemoryReadPtr($mBasePointer, $lOffset)
-    DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $lItemPtr[1], 'ptr', DllStructGetPtr($g_ItemStruct), 'int', DllStructGetSize($g_ItemStruct), 'int', '')
-    Return $g_ItemStruct
-EndFunc   ;==>GetItemByItemID
-
-;~ Description: Returns the nearest item by model ID to an agent.
-Func GetNearestItemByModelIDToAgent($aModelID, $aAgent = -2, $aCanPickUp = True)
-	Local $lNearestAgent, $lNearestDistance = 100000000
-	Local $lDistance
-	If GetMaxAgents() > 0 Then
-		For $i = 1 To GetMaxAgents()
-			Local $a = GetAgentPtr($i)
-			If Not GetIsMovable($a) Then ContinueLoop
-			Local $aMID = DllStructGetData(GetItemByAgentID($i), "ModelID")
-			If $aMID = $aModelID Then    ;Item matches
-				$lDistance = (GetAgentInfo($aAgent, 'X') - GetAgentInfo($a, 'X')) ^ 2 + (GetAgentInfo($aAgent, 'Y') - GetAgentInfo($a, 'Y')) ^ 2
-				If $lDistance < $lNearestDistance Then
-					$lNearestAgent = $a
-					$lNearestDistance = $lDistance
-				EndIf
-			EndIf
-		Next
-		Return $lNearestAgent
-	EndIf
-EndFunc   ;==>GetNearestItemByModelIDToAgent
 
 ;~ Description: Returns amount of gold in storage.
 Func GetGoldStorage()
@@ -3070,18 +2763,24 @@ Func GetGoldCharacter()
 	Return $lReturn[1]
 EndFunc   ;==>GetGoldCharacter
 
+;~ Description: Returns item ID of salvage kit in inventory.
 Func FindSalvageKit()
-	Local $LITEM
+	Local $lItem
 	Local $lKit = 0
 	Local $lUses = 101
-	For $i = 1 To 4
+	For $i = 1 To 16
 		For $j = 1 To DllStructGetData(GetBag($i), 'Slots')
-			$LITEM = GetItemBySlot($i, $j)
-			Switch DllStructGetData($LITEM, 'ModelID')
-				Case 2992
-					If DllStructGetData($LITEM, 'Value') / 2 < $lUses Then
-						$lKit = DllStructGetData($LITEM, 'ID')
-						$lUses = DllStructGetData($LITEM, 'Value') / 2
+			$lItem = GetItemBySlot($i, $j)
+			Switch DllStructGetData($lItem, 'ModelID')
+				Case 2991
+					If DllStructGetData($lItem, 'Value') / 8 < $lUses Then
+						$lKit = DllStructGetData($lItem, 'ID')
+						$lUses = DllStructGetData($lItem, 'Value') / 8
+					EndIf
+				Case 5900
+					If DllStructGetData($lItem, 'Value') / 10 < $lUses Then
+						$lKit = DllStructGetData($lItem, 'ID')
+						$lUses = DllStructGetData($lItem, 'Value') / 10
 					EndIf
 				Case Else
 					ContinueLoop
@@ -3091,56 +2790,24 @@ Func FindSalvageKit()
 	Return $lKit
 EndFunc   ;==>FindSalvageKit
 
-Func FindExpertSalvageKit()
-	Local $LITEM
-	Local $lKit = 0
-	Local $lUses = 101
-	For $i = 1 To 4
-		For $j = 1 To DllStructGetData(GetBag($i), 'Slots')
-			$LITEM = GetItemBySlot($i, $j)
-			Switch DllStructGetData($LITEM, 'ModelID')
-				Case 2991
-					If DllStructGetData($LITEM, 'Value') / 8 < $lUses Then
-						$lKit = DllStructGetData($LITEM, 'ID')
-						$lUses = DllStructGetData($LITEM, 'Value') / 8
-					EndIf
-				Case 5900
-					If DllStructGetData($LITEM, 'Value') / 10 < $lUses Then
-						$lKit = DllStructGetData($LITEM, 'ID')
-						$lUses = DllStructGetData($LITEM, 'Value') / 10
-					EndIf
-				Case Else
-					ContinueLoop
-			EndSwitch
-		Next
-	Next
-	Return $lKit
-EndFunc   ;==>FindExpertSalvageKit
-
-
-;~ Description: Legacy function, use FindIdentificationKit instead.
-Func FindIDKit()
-	Return FindIdentificationKit()
-EndFunc   ;==>FindIDKit
-
 ;~ Description: Returns item ID of ID kit in inventory.
-Func FindIdentificationKit()
-	Local $LITEM
+Func FindIDKit()
+	Local $lItem
 	Local $lKit = 0
 	Local $lUses = 101
 	For $i = 1 To 16
 		For $j = 1 To DllStructGetData(GetBag($i), 'Slots')
-			$LITEM = GetItemBySlot($i, $j)
-			Switch DllStructGetData($LITEM, 'ModelID')
+			$lItem = GetItemBySlot($i, $j)
+			Switch DllStructGetData($lItem, 'ModelID')
 				Case 2989
-					If DllStructGetData($LITEM, 'Value') / 2 < $lUses Then
-						$lKit = DllStructGetData($LITEM, 'ID')
-						$lUses = DllStructGetData($LITEM, 'Value') / 2
+					If DllStructGetData($lItem, 'Value') / 2 < $lUses Then
+						$lKit = DllStructGetData($lItem, 'ID')
+						$lUses = DllStructGetData($lItem, 'Value') / 2
 					EndIf
 				Case 5899
-					If DllStructGetData($LITEM, 'Value') / 2.5 < $lUses Then
-						$lKit = DllStructGetData($LITEM, 'ID')
-						$lUses = DllStructGetData($LITEM, 'Value') / 2.5
+					If DllStructGetData($lItem, 'Value') / 2.5 < $lUses Then
+						$lKit = DllStructGetData($lItem, 'ID')
+						$lUses = DllStructGetData($lItem, 'Value') / 2.5
 					EndIf
 				Case Else
 					ContinueLoop
@@ -3148,7 +2815,7 @@ Func FindIdentificationKit()
 		Next
 	Next
 	Return $lKit
-EndFunc   ;==>FindIdentificationKit
+EndFunc   ;==>FindIDKit
 
 ;~ Description: Returns the item ID of the quoted item.
 Func GetTraderCostID()
@@ -3262,229 +2929,17 @@ EndFunc   ;==>GetIsHeroSkillSlotDisabled
 #Region Agent
 ;~ Description: Returns an agent struct.
 Func GetAgentByID($aAgentID = -2)
+	;returns dll struct if successful
 	Local $lAgentPtr = GetAgentPtr($aAgentID)
-
 	If $lAgentPtr = 0 Then Return 0
-
-	DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $lAgentPtr, 'ptr', DllStructGetPtr($g_AgentStruct), 'int', DllStructGetSize($g_AgentStruct), 'int', '')
-
-    Return $g_AgentStruct
+	;Offsets: 0x2C=AgentID 0x9C=Type 0xF4=PlayerNumber 0114=Energy Pips
+	Local $lAgentStruct = DllStructCreate('ptr vtable;byte unknown1[24];byte unknown2[4];ptr NextAgent;byte unknown3[8];long Id;float Z;byte unknown4[8];float BoxHoverWidth;float BoxHoverHeight;byte unknown5[8];float Rotation;byte unknown6[8];long NameProperties;byte unknown7[24];float X;float Y;byte unknown8[8];float NameTagX;float NameTagY;float NameTagZ;byte unknown9[12];long Type;float MoveX;float MoveY;byte unknown10[28];long Owner;byte unknown30[8];long ExtraType;byte unknown11[24];float AttackSpeed;float AttackSpeedModifier;word PlayerNumber;byte unknown12[6];ptr Equip;byte unknown13[10];byte Primary;byte Secondary;byte Level;byte Team;byte unknown14[6];float EnergyPips;byte unknown[4];float EnergyPercent;long MaxEnergy;byte unknown15[4];float HPPips;byte unknown16[4];float HP;long MaxHP;long Effects;byte unknown17[4];byte Hex;byte unknown18[18];long ModelState;long TypeMap;byte unknown19[16];long InSpiritRange;byte unknown20[16];long LoginNumber;float ModelMode;byte unknown21[4];long ModelAnimation;byte unknown22[32];byte LastStrike;byte Allegiance;word WeaponType;word Skill;byte unknown23[4];word WeaponItemId;word OffhandItemId')
+	DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $lAgentPtr, 'ptr', DllStructGetPtr($lAgentStruct), 'int', DllStructGetSize($lAgentStruct), 'int', '')
+	Return $lAgentStruct
 EndFunc   ;==>GetAgentByID
 
-Func GetAgentInfo($aAgentID, $aInfo = "")
-    Local $lAgentPtr = GetAgentPtr($aAgentID)
-    If $lAgentPtr = 0 Or $aInfo = "" Then Return 0
-
-    Switch $aInfo
-        Case "vtable"
-            Return MemoryRead($lAgentPtr, "ptr")
-        Case "h0004"
-            Return MemoryRead($lAgentPtr + 0x4, "dword")
-        Case "h0008"
-            Return MemoryRead($lAgentPtr + 0x8, "dword")
-        Case "h000C"
-            Return MemoryRead($lAgentPtr + 0xC, "dword")
-        Case "h0010"
-            Return MemoryRead($lAgentPtr + 0x10, "dword")
-        Case "Timer"
-            Return MemoryRead($lAgentPtr + 0x14, "dword")
-        Case "Timer2"
-            Return MemoryRead($lAgentPtr + 0x18, "dword")
-        Case "h0018"
-            Return MemoryRead($lAgentPtr + 0x1C, "dword[4]")
-        Case "ID"
-            Return MemoryRead($lAgentPtr + 0x2C, "long")
-        Case "Z"
-            Return MemoryRead($lAgentPtr + 0x30, "float")
-        Case "Width1"
-            Return MemoryRead($lAgentPtr + 0x34, "float")
-        Case "Height1"
-            Return MemoryRead($lAgentPtr + 0x38, "float")
-        Case "Width2"
-            Return MemoryRead($lAgentPtr + 0x3C, "float")
-        Case "Height2"
-            Return MemoryRead($lAgentPtr + 0x40, "float")
-        Case "Width3"
-            Return MemoryRead($lAgentPtr + 0x44, "float")
-        Case "Height3"
-            Return MemoryRead($lAgentPtr + 0x48, "float")
-        Case "Rotation"
-            Return MemoryRead($lAgentPtr + 0x4C, "float")
-        Case "RotationCos"
-            Return MemoryRead($lAgentPtr + 0x50, "float")
-        Case "RotationSin"
-            Return MemoryRead($lAgentPtr + 0x54, "float")
-        Case "NameProperties"
-            Return MemoryRead($lAgentPtr + 0x58, "dword")
-        Case "Ground"
-            Return MemoryRead($lAgentPtr + 0x5C, "dword")
-        Case "h0060"
-            Return MemoryRead($lAgentPtr + 0x60, "dword")
-        Case "TerrainNormalX"
-            Return MemoryRead($lAgentPtr + 0x64, "float")
-        Case "TerrainNormalY"
-            Return MemoryRead($lAgentPtr + 0x68, "float")
-        Case "TerrainNormalZ"
-            Return MemoryRead($lAgentPtr + 0x6C, "dword")
-        Case "h0070"
-            Return MemoryRead($lAgentPtr + 0x70, "byte[4]")
-        Case "X"
-            Return MemoryRead($lAgentPtr + 0x74, "float")
-        Case "Y"
-            Return MemoryRead($lAgentPtr + 0x78, "float")
-        Case "Plane"
-            Return MemoryRead($lAgentPtr + 0x7C, "dword")
-        Case "h0080"
-            Return MemoryRead($lAgentPtr + 0x80, "byte[4]")
-        Case "NameTagX"
-            Return MemoryRead($lAgentPtr + 0x84, "float")
-        Case "NameTagY"
-            Return MemoryRead($lAgentPtr + 0x88, "float")
-        Case "NameTagZ"
-            Return MemoryRead($lAgentPtr + 0x8C, "float")
-        Case "VisualEffects"
-            Return MemoryRead($lAgentPtr + 0x90, "short")
-        Case "h0092"
-            Return MemoryRead($lAgentPtr + 0x92, "short")
-        Case "h0094"
-            Return MemoryRead($lAgentPtr + 0x94, "dword[2]")
-        Case "Type"
-            Return MemoryRead($lAgentPtr + 0x98, "long")
-        Case "MoveX"
-            Return MemoryRead($lAgentPtr + 0x9C, "float")
-        Case "MoveY"
-            Return MemoryRead($lAgentPtr + 0xA0, "float")
-        Case "h00A8"
-            Return MemoryRead($lAgentPtr + 0xA8, "dword")
-        Case "RotationCos2"
-            Return MemoryRead($lAgentPtr + 0xAC, "float")
-        Case "RotationSin2"
-            Return MemoryRead($lAgentPtr + 0xB0, "float")
-        Case "h00B4"
-            Return MemoryRead($lAgentPtr + 0xB4, "dword[4]")
-        Case "Owner"
-            Return MemoryRead($lAgentPtr + 0xC4, "long")
-        Case "ItemID"
-            Return MemoryRead($lAgentPtr + 0xC8, "dword")
-        Case "ExtraType"
-            Return MemoryRead($lAgentPtr + 0xCC, "dword")
-        Case "GadgetID"
-            Return MemoryRead($lAgentPtr + 0xD0, "dword")
-        Case "h00D4"
-            Return MemoryRead($lAgentPtr + 0xD4, "dword[3]")
-        Case "AnimationType"
-            Return MemoryRead($lAgentPtr + 0xE0, "float")
-        Case "h00E4"
-            Return MemoryRead($lAgentPtr + 0xE4, "dword[2]")
-        Case "AttackSpeed"
-            Return MemoryRead($lAgentPtr + 0xEC, "float")
-        Case "AttackSpeedModifier"
-            Return MemoryRead($lAgentPtr + 0xF0, "float")
-        Case "PlayerNumber"
-            Return MemoryRead($lAgentPtr + 0xF4, "short")
-        Case "AgentModelType"
-            Return MemoryRead($lAgentPtr + 0xF6, "short")
-		Case "TransmogNpcId"
-            Return MemoryRead($lAgentPtr + 0xF8, "dword")
-        Case "Equip"
-            Return MemoryRead($lAgentPtr + 0xFC, "ptr")
-        Case "h0100"
-            Return MemoryRead($lAgentPtr + 0x100, "dword")
-        Case "Tags"
-            Return MemoryRead($lAgentPtr + 0x104, "ptr")
-        Case "h0108"
-            Return MemoryRead($lAgentPtr + 0x108, "short")
-        Case "Primary"
-            Return MemoryRead($lAgentPtr + 0x10A, "byte")
-        Case "Secondary"
-            Return MemoryRead($lAgentPtr + 0x10B, "byte")
-        Case "Level"
-            Return MemoryRead($lAgentPtr + 0x10C, "byte")
-        Case "Team"
-            Return MemoryRead($lAgentPtr + 0x10D, "byte")
-        Case "h010E"
-            Return MemoryRead($lAgentPtr + 0x10E, "byte[2]")
-        Case "h0110"
-            Return MemoryRead($lAgentPtr + 0x110, "dword")
-        Case "EnergyRegen"
-            Return MemoryRead($lAgentPtr + 0x114, "float")
-        Case "Overcast"
-            Return MemoryRead($lAgentPtr + 0x118, "float")
-        Case "EnergyPercent"
-            Return MemoryRead($lAgentPtr + 0x11C, "float")
-        Case "MaxEnergy"
-            Return MemoryRead($lAgentPtr + 0x120, "dword")
-        Case "h0124"
-            Return MemoryRead($lAgentPtr + 0x124, "dword")
-        Case "HPPips"
-            Return MemoryRead($lAgentPtr + 0x128, "float")
-        Case "h012C"
-            Return MemoryRead($lAgentPtr + 0x12C, "dword")
-        Case "HP"
-            Return MemoryRead($lAgentPtr + 0x130, "float")
-        Case "MaxHP"
-            Return MemoryRead($lAgentPtr + 0x134, "dword")
-        Case "Effects"
-            Return MemoryRead($lAgentPtr + 0x138, "dword")
-        Case "h013C"
-            Return MemoryRead($lAgentPtr + 0x13C, "dword")
-        Case "Hex"
-            Return MemoryRead($lAgentPtr + 0x140, "byte")
-        Case "h0141"
-            Return MemoryRead($lAgentPtr + 0x141, "byte[19]")
-        Case "ModelState"
-            Return MemoryRead($lAgentPtr + 0x154, "dword")
-        Case "TypeMap"
-            Return MemoryRead($lAgentPtr + 0x158, "dword")
-        Case "h015C"
-            Return MemoryRead($lAgentPtr + 0x15C, "dword[4]")
-        Case "InSpiritRange"
-            Return MemoryRead($lAgentPtr + 0x16C, "dword")
-        Case "VisibleEffects"
-            Return MemoryRead($lAgentPtr + 0x170, "dword")
-        Case "VisibleEffectsID"
-            Return MemoryRead($lAgentPtr + 0x174, "dword")
-        Case "VisibleEffectsHasEnded"
-            Return MemoryRead($lAgentPtr + 0x178, "dword")
-        Case "h017C"
-            Return MemoryRead($lAgentPtr + 0x17C, "dword")
-        Case "LoginNumber"
-            Return MemoryRead($lAgentPtr + 0x180, "dword")
-        Case "AnimationSpeed"
-            Return MemoryRead($lAgentPtr + 0x184, "float")
-        Case "AnimationCode"
-            Return MemoryRead($lAgentPtr + 0x188, "dword")
-        Case "AnimationId"
-            Return MemoryRead($lAgentPtr + 0x18C, "dword")
-        Case "h0190"
-            Return MemoryRead($lAgentPtr + 0x190, "byte[32]")
-        Case "LastStrike"
-            Return MemoryRead($lAgentPtr + 0x1B0, "byte")
-        Case "Allegiance"
-            Return MemoryRead($lAgentPtr + 0x1B1, "byte")
-        Case "WeaponType"
-            Return MemoryRead($lAgentPtr + 0x1B2, "short")
-        Case "Skill"
-            Return MemoryRead($lAgentPtr + 0x1B4, "short")
-        Case "h01B6"
-            Return MemoryRead($lAgentPtr + 0x1B6, "short")
-        Case "WeaponItemType"
-            Return MemoryRead($lAgentPtr + 0x1B8, "byte")
-        Case "OffhandItemType"
-            Return MemoryRead($lAgentPtr + 0x1B9, "byte")
-        Case "WeaponItemId"
-            Return MemoryRead($lAgentPtr + 0x1BA, "short")
-        Case "OffhandItemId"
-            Return MemoryRead($lAgentPtr + 0x1BC, "short")
-		Case Else
-			Return 0
-	EndSwitch
-
-    Return 0
-EndFunc
-
-;~ Description: Internal use for GetAgentByID/GetAgentInfo()
-Func GetAgentPtr($aAgentID = -2)
+;~ Description: Internal use for GetAgentByID()
+Func GetAgentPtr($aAgentID)
 	Local $lOffset[3] = [0, 4 * ConvertID($aAgentID), 0]
 	Local $lAgentStructAddress = MemoryReadPtr($mAgentBase, $lOffset)
 	Return $lAgentStructAddress[0]
@@ -3492,19 +2947,27 @@ EndFunc   ;==>GetAgentPtr
 
 ;~ Description: Test if an agent exists.
 Func GetAgentExists($aAgentID)
-	Return GetAgentPtr($aAgentID) <> 0
+	Return (GetAgentPtr($aAgentID) > 0 And $aAgentID < GetMaxAgents())
 EndFunc   ;==>GetAgentExists
 
 ;~ Description: Returns the target of an agent.
 Func GetTarget($aAgent)
-	Return MemoryRead(GetValue('TargetLogBase') + 4 * ConvertID($aAgent))
+	Local $lAgentID
+
+	If IsDllStruct($aAgent) = 0 Then
+		$lAgentID = ConvertID($aAgent)
+	Else
+		$lAgentID = DllStructGetData($aAgent, 'ID')
+	EndIf
+
+	Return MemoryRead(GetValue('TargetLogBase') + 4 * $lAgentID)
 EndFunc   ;==>GetTarget
 
 ;~ Description: Returns agent by player name.
 Func GetAgentByPlayerName($aPlayerName)
 	For $i = 1 To GetMaxAgents()
 		If GetPlayerName($i) = $aPlayerName Then
-			Return GetAgentPtr($i)
+			Return GetAgentByID($i)
 		EndIf
 	Next
 EndFunc   ;==>GetAgentByPlayerName
@@ -3519,7 +2982,7 @@ Func GetAgentByName($aName)
 		$lAddress = $mStringLogBase + 256 * $i
 		$lName = MemoryRead($lAddress, 'wchar [128]')
 		$lName = StringRegExpReplace($lName, '[<]{1}([^>]+)[>]{1}', '')
-		If StringInStr($lName, $aName) > 0 Then Return GetAgentPtr($i)
+		If StringInStr($lName, $aName) > 0 Then Return GetAgentByID($i)
 	Next
 
 	DisplayAll(True)
@@ -3533,7 +2996,7 @@ Func GetAgentByName($aName)
 		$lAddress = $mStringLogBase + 256 * $i
 		$lName = MemoryRead($lAddress, 'wchar [128]')
 		$lName = StringRegExpReplace($lName, '[<]{1}([^>]+)[>]{1}', '')
-		If StringInStr($lName, $aName) > 0 Then Return GetAgentPtr($i)
+		If StringInStr($lName, $aName) > 0 Then Return GetAgentByID($i)
 	Next
 EndFunc   ;==>GetAgentByName
 
@@ -3543,13 +3006,15 @@ Func GetNearestAgentToAgent($aAgent = -2)
 	Local $lDistance
 	Local $lAgentArray = GetAgentArray()
 
-	Local $lID = GetAgentInfo($aAgent, 'ID')
+	If IsDllStruct($aAgent) = 0 Then $aAgent = GetAgentByID($aAgent)
+
+	Local $lID = DllStructGetData($aAgent, 'ID')
 
 	For $i = 1 To $lAgentArray[0]
-		$lDistance = (GetAgentInfo($aAgent, 'X') - GetAgentInfo($lAgentArray[$i], 'X')) ^ 2 + (GetAgentInfo($aAgent, 'Y') - GetAgentInfo($lAgentArray[$i], 'Y')) ^ 2
+		$lDistance = (DllStructGetData($aAgent, 'X') - DllStructGetData($lAgentArray[$i], 'X')) ^ 2 + (DllStructGetData($aAgent, 'Y') - DllStructGetData($lAgentArray[$i], 'Y')) ^ 2
 
 		If $lDistance < $lNearestDistance Then
-			If GetAgentInfo($lAgentArray[$i], 'ID') == $lID Then ContinueLoop
+			If DllStructGetData($lAgentArray[$i], 'ID') == $lID Then ContinueLoop
 			$lNearestAgent = $lAgentArray[$i]
 			$lNearestDistance = $lDistance
 		EndIf
@@ -3561,21 +3026,23 @@ EndFunc   ;==>GetNearestAgentToAgent
 
 ;~ Description: Returns the nearest enemy to an agent.
 Func GetNearestEnemyToAgent($aAgent = -2)
-	Local $lNearestAgent, $lNearestDistance = 10000000 ;10000000
+	Local $lNearestAgent, $lNearestDistance = 100000000
 	Local $lDistance
 	Local $lAgentArray = GetAgentArray(0xDB)
 
-	Local $lID = GetAgentInfo($aAgent, 'ID')
+	If Not IsDllStruct($aAgent) Then $aAgent = GetAgentByID($aAgent)
+
+	Local $lID = DllStructGetData($aAgent, 'ID')
 
 	For $i = 1 To $lAgentArray[0]
-		$lDistance = (GetAgentInfo($aAgent, 'X') - GetAgentInfo($lAgentArray[$i], 'X')) ^ 2 + (GetAgentInfo($aAgent, 'Y') - GetAgentInfo($lAgentArray[$i], 'Y')) ^ 2
-		If GetAgentInfo($lAgentArray[$i], 'Allegiance') <> 3 Then ContinueLoop
-		If GetAgentInfo($lAgentArray[$i], 'HP') <= 0 Then ContinueLoop
-		If BitAND(GetAgentInfo($lAgentArray[$i], 'Effects'), 0x0010) > 0 Then ContinueLoop
+		$lDistance = (DllStructGetData($aAgent, 'X') - DllStructGetData($lAgentArray[$i], 'X')) ^ 2 + (DllStructGetData($aAgent, 'Y') - DllStructGetData($lAgentArray[$i], 'Y')) ^ 2
+		If DllStructGetData($lAgentArray[$i], 'Allegiance') <> 3 Then ContinueLoop
+		If DllStructGetData($lAgentArray[$i], 'HP') <= 0 Then ContinueLoop
+		If BitAND(DllStructGetData($lAgentArray[$i], 'Effects'), 0x0010) > 0 Then ContinueLoop
 
-		$lDistance = (GetAgentInfo($aAgent, 'X') - GetAgentInfo($lAgentArray[$i], 'X')) ^ 2 + (GetAgentInfo($aAgent, 'Y') - GetAgentInfo($lAgentArray[$i], 'Y')) ^ 2
+		$lDistance = (DllStructGetData($aAgent, 'X') - DllStructGetData($lAgentArray[$i], 'X')) ^ 2 + (DllStructGetData($aAgent, 'Y') - DllStructGetData($lAgentArray[$i], 'Y')) ^ 2
 		If $lDistance < $lNearestDistance Then
-			If GetAgentInfo($lAgentArray[$i], 'ID') == $lID Then ContinueLoop
+			If DllStructGetData($lAgentArray[$i], 'ID') == $lID Then ContinueLoop
 			$lNearestAgent = $lAgentArray[$i]
 			$lNearestDistance = $lDistance
 		EndIf
@@ -3585,11 +3052,29 @@ Func GetNearestEnemyToAgent($aAgent = -2)
 	Return $lNearestAgent
 EndFunc   ;==>GetNearestEnemyToAgent
 
-Func GetAgentByPlayerNumber($aPlayerNumber)
+;~ Description: Returns the nearest agent to a set of coordinates.
+Func GetNearestAgentToCoords($aX, $aY)
+	Local $lNearestAgent, $lNearestDistance = 100000000
+	Local $lDistance
 	Local $lAgentArray = GetAgentArray()
 
 	For $i = 1 To $lAgentArray[0]
-		If GetAgentInfo($lAgentArray[$i], "PlayerNumber") == $aPlayerNumber Then Return $lAgentArray[$i]
+		$lDistance = ($aX - DllStructGetData($lAgentArray[$i], 'X')) ^ 2 + ($aY - DllStructGetData($lAgentArray[$i], 'Y')) ^ 2
+		If $lDistance < $lNearestDistance Then
+			$lNearestAgent = $lAgentArray[$i]
+			$lNearestDistance = $lDistance
+		EndIf
+	Next
+
+	SetExtended(Sqrt($lNearestDistance))
+	Return $lNearestAgent
+EndFunc   ;==>GetNearestAgentToCoords
+
+Func GetAgentByPlayerNumber($aPlayerNumber)
+	Local $lAgentArray = GetAgentArray()
+	If IsDllStruct($aPlayerNumber) Then Return DllStructGetData($aPlayerNumber, "PlayerNumber")
+	For $i = 1 To $lAgentArray[0]
+		If DllStructGetData($lAgentArray[$i], "PlayerNumber") == $aPlayerNumber Then Return $lAgentArray[$i]
 	Next
 EndFunc   ;==>GetAgentByPlayerNumber
 
@@ -3600,12 +3085,14 @@ Func GetNearestSignpostToAgent($aAgent = -2)
 	Local $lDistance
 	Local $lAgentArray = GetAgentArray(0x200)
 
-	Local $lID = GetAgentInfo($aAgent, 'ID')
+	If IsDllStruct($aAgent) = 0 Then $aAgent = GetAgentByID($aAgent)
+
+	Local $lID = DllStructGetData($aAgent, 'ID')
 
 	For $i = 1 To $lAgentArray[0]
-		$lDistance = (GetAgentInfo($lAgentArray[$i], 'Y') - GetAgentInfo($aAgent, 'Y')) ^ 2 + (GetAgentInfo($lAgentArray[$i], 'X') - GetAgentInfo($aAgent, 'X')) ^ 2
+		$lDistance = (DllStructGetData($lAgentArray[$i], 'Y') - DllStructGetData($aAgent, 'Y')) ^ 2 + (DllStructGetData($lAgentArray[$i], 'X') - DllStructGetData($aAgent, 'X')) ^ 2
 		If $lDistance < $lNearestDistance Then
-			If GetAgentInfo($lAgentArray[$i], 'ID') == $lID Then ContinueLoop
+			If DllStructGetData($lAgentArray[$i], 'ID') == $lID Then ContinueLoop
 			$lNearestAgent = $lAgentArray[$i]
 			$lNearestDistance = $lDistance
 		EndIf
@@ -3622,7 +3109,7 @@ Func GetNearestSignpostToCoords($aX, $aY)
 	Local $lAgentArray = GetAgentArray(0x200)
 
 	For $i = 1 To $lAgentArray[0]
-		$lDistance = ($aX - GetAgentInfo($lAgentArray[$i], 'X')) ^ 2 + ($aY - GetAgentInfo($lAgentArray[$i], 'Y')) ^ 2
+		$lDistance = ($aX - DllStructGetData($lAgentArray[$i], 'X')) ^ 2 + ($aY - DllStructGetData($lAgentArray[$i], 'Y')) ^ 2
 
 		If $lDistance < $lNearestDistance Then
 			$lNearestAgent = $lAgentArray[$i]
@@ -3640,16 +3127,18 @@ Func GetNearestNPCToAgent($aAgent)
 	Local $lDistance
 	Local $lAgentArray = GetAgentArray(0xDB)
 
-	Local $lID = GetAgentInfo($aAgent, 'ID')
+	If Not IsDllStruct($aAgent) Then $aAgent = GetAgentByID($aAgent)
+
+	Local $lID = DllStructGetData($aAgent, 'ID')
 
 	For $i = 1 To $lAgentArray[0]
-		If GetAgentInfo($lAgentArray[$i], 'Allegiance') <> 6 Then ContinueLoop
-		If GetAgentInfo($lAgentArray[$i], 'HP') <= 0 Then ContinueLoop
-		If BitAND(GetAgentInfo($lAgentArray[$i], 'Effects'), 0x0010) > 0 Then ContinueLoop
+		If DllStructGetData($lAgentArray[$i], 'Allegiance') <> 6 Then ContinueLoop
+		If DllStructGetData($lAgentArray[$i], 'HP') <= 0 Then ContinueLoop
+		If BitAND(DllStructGetData($lAgentArray[$i], 'Effects'), 0x0010) > 0 Then ContinueLoop
 
-		$lDistance = (GetAgentInfo($aAgent, 'X') - GetAgentInfo($lAgentArray[$i], 'X')) ^ 2 + (GetAgentInfo($aAgent, 'Y') - GetAgentInfo($lAgentArray[$i], 'Y')) ^ 2
+		$lDistance = (DllStructGetData($aAgent, 'X') - DllStructGetData($lAgentArray[$i], 'X')) ^ 2 + (DllStructGetData($aAgent, 'Y') - DllStructGetData($lAgentArray[$i], 'Y')) ^ 2
 		If $lDistance < $lNearestDistance Then
-			If GetAgentInfo($lAgentArray[$i], 'ID') == $lID Then ContinueLoop
+			If DllStructGetData($lAgentArray[$i], 'ID') == $lID Then ContinueLoop
 			$lNearestAgent = $lAgentArray[$i]
 			$lNearestDistance = $lDistance
 		EndIf
@@ -3661,18 +3150,16 @@ EndFunc   ;==>GetNearestNPCToAgent
 
 ;~ Description: Returns the nearest NPC to a set of coordinates.
 Func GetNearestNPCToCoords($aX, $aY)
-	Local $lNearestAgent, $lNearestDistance = 100000
+	Local $lNearestAgent, $lNearestDistance = 100000000
 	Local $lDistance
 	Local $lAgentArray = GetAgentArray(0xDB)
 
 	For $i = 1 To $lAgentArray[0]
-		If GetAgentInfo($lAgentArray[$i], 'Allegiance') <> 6 Then ContinueLoop
-		If GetAgentInfo($lAgentArray[$i], 'HP') <= 0 Then ContinueLoop
-		If BitAND(GetAgentInfo($lAgentArray[$i], 'Effects'), 0x0010) > 0 Then ContinueLoop
+		If DllStructGetData($lAgentArray[$i], 'Allegiance') <> 6 Then ContinueLoop
+		If DllStructGetData($lAgentArray[$i], 'HP') <= 0 Then ContinueLoop
+		If BitAND(DllStructGetData($lAgentArray[$i], 'Effects'), 0x0010) > 0 Then ContinueLoop
 
-		$lDistance = ($aX - GetAgentInfo($lAgentArray[$i], 'X')) ^ 2 + ($aY - GetAgentInfo($lAgentArray[$i], 'Y')) ^ 2
-		;$lDistance = (($aX - GetAgentInfo($lAgentArray[$i], 'X')) * ($aX - GetAgentInfo($lAgentArray[$i], 'X'))) + (($aY - GetAgentInfo($lAgentArray[$i], 'Y')) * ($aY - GetAgentInfo($lAgentArray[$i], 'Y')))
-
+		$lDistance = ($aX - DllStructGetData($lAgentArray[$i], 'X')) ^ 2 + ($aY - DllStructGetData($lAgentArray[$i], 'Y')) ^ 2
 
 		If $lDistance < $lNearestDistance Then
 			$lNearestAgent = $lAgentArray[$i]
@@ -3684,22 +3171,22 @@ Func GetNearestNPCToCoords($aX, $aY)
 	Return $lNearestAgent
 EndFunc   ;==>GetNearestNPCToCoords
 
-
-
 ;~ Description: Returns the nearest item to an agent.
 Func GetNearestItemToAgent($aAgent = -2, $aCanPickUp = True)
-	Local $lNearestAgent, $lNearestDistance = 10000
+	Local $lNearestAgent, $lNearestDistance = 1000
 	Local $lDistance
 	Local $lAgentArray = GetAgentArray(0x400)
 
-	Local $lID = GetAgentInfo($aAgent, 'ID')
+	If Not IsDllStruct($aAgent) Then $aAgent = GetAgentByID($aAgent)
+
+	Local $lID = DllStructGetData($aAgent, 'ID')
 
 	For $i = 1 To $lAgentArray[0]
 
 		If $aCanPickUp And Not GetCanPickUp($lAgentArray[$i]) Then ContinueLoop
-		$lDistance = (GetAgentInfo($aAgent, 'X') - GetAgentInfo($lAgentArray[$i], 'X')) ^ 2 + (GetAgentInfo($aAgent, 'Y') - GetAgentInfo($lAgentArray[$i], 'Y')) ^ 2
+		$lDistance = (DllStructGetData($aAgent, 'X') - DllStructGetData($lAgentArray[$i], 'X')) ^ 2 + (DllStructGetData($aAgent, 'Y') - DllStructGetData($lAgentArray[$i], 'Y')) ^ 2
 		If $lDistance < $lNearestDistance Then
-			If GetAgentInfo($lAgentArray[$i], 'ID') == $lID Then ContinueLoop
+			If DllStructGetData($lAgentArray[$i], 'ID') == $lID Then ContinueLoop
 			$lNearestAgent = $lAgentArray[$i]
 			$lNearestDistance = $lDistance
 		EndIf
@@ -3715,8 +3202,8 @@ Func GetParty($aAgentArray = 0)
 	Local $lReturnArray[1] = [0]
 	If $aAgentArray == 0 Then $aAgentArray = GetAgentArray(0xDB)
 	For $i = 1 To $aAgentArray[0]
-		If GetAgentInfo($aAgentArray[$i], 'Allegiance') == 1 Then
-			If BitAND(GetAgentInfo($aAgentArray[$i], 'TypeMap'), 131072) Then
+		If DllStructGetData($aAgentArray[$i], 'Allegiance') == 1 Then
+			If BitAND(DllStructGetData($aAgentArray[$i], 'TypeMap'), 131072) Then
 				$lReturnArray[0] += 1
 				ReDim $lReturnArray[$lReturnArray[0] + 1]
 				$lReturnArray[$lReturnArray[0]] = $aAgentArray[$i]
@@ -3726,66 +3213,33 @@ Func GetParty($aAgentArray = 0)
 	Return $lReturnArray
 EndFunc   ;==>GetParty
 
-;This function uses GetParty to get the list of party members and then iterates through the list,checking each member's status using GetIsDead. It returns true if any party member is found to be dead.
-Func CheckIfAnyPartyMembersDead()
-	Local $partyArray = GetParty()
-	For $i = 1 To $partyArray[0]
-		If GetIsDead($partyArray[$i]) Then
-			Return True
-		EndIf
+;~ Description: Quickly creates an array of agents of a given type
+Func GetAgentArray($aType = 0)
+	Local $lStruct
+	Local $lCount
+	Local $lBuffer = ''
+	DllStructSetData($mMakeAgentArray, 2, $aType)
+	MemoryWrite($mAgentCopyCount, -1, 'long')
+	Enqueue($mMakeAgentArrayPtr, 8)
+	Local $lDeadlock = TimerInit()
+	Do
+		Sleep(1)
+		$lCount = MemoryRead($mAgentCopyCount, 'long')
+	Until $lCount >= 0 Or TimerDiff($lDeadlock) > 5000
+	If $lCount < 0 Then $lCount = 0
+	For $i = 1 To $lCount
+		$lBuffer &= 'Byte[448];'
 	Next
-	Return False
-EndFunc   ;==>CheckIfAnyPartyMembersDead
-
-;~ Description: Quickly creates an array of agents of a given type and allegiance.
-Func GetAgentArray($aType = 0xDB, $aAllegiance = 0)
-    If $mAgentArray = 0 Then Return 0
-
-    Local $lArrayBuffer = MemoryRead($mAgentArray)    ; m_buffer
-    Local $lArraySize = MemoryRead($mAgentArray + 8)  ; m_size
-
-    Local $lAgentCount = 0
-    Local $lTempIDs[$lArraySize]
-
-    For $i = 0 To $lArraySize - 1
-        Local $lAgentID = $i + 1
-        Local $lAgentPtr = GetAgentPtr($lAgentID)
-
-        If $lAgentPtr <> 0 Then
-            Local $lAdd = True
-
-            If $aType <> 0 Then
-                If GetAgentInfo($lAgentPtr, 'Type') <> $aType Then
-                    $lAdd = False
-                EndIf
-            EndIf
-
-            If $aAllegiance <> 0 And $lAdd Then
-                If GetAgentInfo($lAgentPtr, 'Allegiance') <> $aAllegiance Then
-                    $lAdd = False
-                EndIf
-            EndIf
-
-            If $lAdd Then
-                $lTempIDs[$lAgentCount] = $lAgentID
-                $lAgentCount += 1
-            EndIf
-        EndIf
-    Next
-
-    Local $lReturnArray[$lAgentCount + 1]
-    $lReturnArray[0] = $lAgentCount
-
-    For $i = 1 To $lAgentCount
-        $lReturnArray[$i] = GetAgentInfo($lTempIDs[$i-1], "ID")
-    Next
-
-    Return $lReturnArray
-EndFunc
-
-Func GetIsHardMode()
-	Return GetPartyState(0x10)
-EndFunc   ;==>GetIsHardMode
+	$lBuffer = DllStructCreate($lBuffer)
+	DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $mAgentCopyBase, 'ptr', DllStructGetPtr($lBuffer), 'int', DllStructGetSize($lBuffer), 'int', '')
+	Local $lReturnArray[$lCount + 1] = [$lCount]
+	For $i = 1 To $lCount
+		$lReturnArray[$i] = DllStructCreate('ptr vtable;byte unknown1[24];byte unknown2[4];ptr NextAgent;byte unknown3[8];long Id;float Z;byte unknown4[8];float BoxHoverWidth;float BoxHoverHeight;byte unknown5[8];float Rotation;byte unknown6[8];long NameProperties;byte unknown7[24];float X;float Y;byte unknown8[8];float NameTagX;float NameTagY;float NameTagZ;byte unknown9[12];long Type;float MoveX;float MoveY;byte unknown10[28];long Owner;byte unknown30[8];long ExtraType;byte unknown11[24];float AttackSpeed;float AttackSpeedModifier;word PlayerNumber;byte unknown12[6];ptr Equip;byte unknown13[10];byte Primary;byte Secondary;byte Level;byte Team;byte unknown14[6];float EnergyPips;byte unknown[4];float EnergyPercent;long MaxEnergy;byte unknown15[4];float HPPips;byte unknown16[4];float HP;long MaxHP;long Effects;byte unknown17[4];byte Hex;byte unknown18[18];long ModelState;long TypeMap;byte unknown19[16];long InSpiritRange;byte unknown20[16];long LoginNumber;float ModelMode;byte unknown21[4];long ModelAnimation;byte unknown22[32];byte LastStrike;byte Allegiance;word WeaponType;word Skill;byte unknown23[4];word WeaponItemId;word OffhandItemId')
+		$lStruct = DllStructCreate('byte[448]', DllStructGetPtr($lReturnArray[$i]))
+		DllStructSetData($lStruct, 1, DllStructGetData($lBuffer, $i))
+	Next
+	Return $lReturnArray
+EndFunc   ;==>GetAgentArray
 
 ;~ Description Returns the "danger level" of each party member
 ;~ Param1: an array returned by GetAgentArray(). This is totally optional, but can greatly improve script speed.
@@ -3801,19 +3255,19 @@ Func GetPartyDanger($aAgentArray = 0, $aParty = 0)
 	Next
 
 	For $i = 1 To $aAgentArray[0]
-		If BitAND(GetAgentInfo($aAgentArray[$i], 'Effects'), 0x0010) > 0 Then ContinueLoop
-		If GetAgentInfo($aAgentArray[$i], 'HP') <= 0 Then ContinueLoop
+		If BitAND(DllStructGetData($aAgentArray[$i], 'Effects'), 0x0010) > 0 Then ContinueLoop
+		If DllStructGetData($aAgentArray[$i], 'HP') <= 0 Then ContinueLoop
 		If Not GetIsLiving($aAgentArray[$i]) Then ContinueLoop
-		If GetAgentInfo($aAgentArray[$i], "Allegiance") > 3 Then ContinueLoop ; ignore NPCs, spirits, minions, pets
+		If DllStructGetData($aAgentArray[$i], "Allegiance") > 3 Then ContinueLoop ; ignore NPCs, spirits, minions, pets
 
 		For $j = 1 To $aParty[0]
-			If GetTarget(GetAgentInfo($aAgentArray[$i], "ID")) == GetAgentInfo($aParty[$j], "ID") Then
+			If GetTarget(DllStructGetData($aAgentArray[$i], "ID")) == DllStructGetData($aParty[$j], "ID") Then
 				If GetDistance($aAgentArray[$i], $aParty[$j]) < 5000 Then
-					If GetAgentInfo($aAgentArray[$i], "Team") <> 0 Then
-						If GetAgentInfo($aAgentArray[$i], "Team") <> GetAgentInfo($aParty[$j], "Team") Then
+					If DllStructGetData($aAgentArray[$i], "Team") <> 0 Then
+						If DllStructGetData($aAgentArray[$i], "Team") <> DllStructGetData($aParty[$j], "Team") Then
 							$lReturnArray[$j] += 1
 						EndIf
-					ElseIf GetAgentInfo($aAgentArray[$i], "Allegiance") <> GetAgentInfo($aParty[$j], "Allegiance") Then
+					ElseIf DllStructGetData($aAgentArray[$i], "Allegiance") <> DllStructGetData($aParty[$j], "Allegiance") Then
 						$lReturnArray[$j] += 1
 					EndIf
 				EndIf
@@ -3822,25 +3276,28 @@ Func GetPartyDanger($aAgentArray = 0, $aParty = 0)
 	Next
 	Return $lReturnArray
 EndFunc   ;==>GetPartyDanger
-
 ;~ Description: Return the number of enemy agents targeting the given agent.
 Func GetAgentDanger($aAgent, $aAgentArray = 0)
+	If IsDllStruct($aAgent) = 0 Then
+		$aAgent = GetAgentByID($aAgent)
+	EndIf
+
 	Local $lCount = 0
 
 	If $aAgentArray == 0 Then $aAgentArray = GetAgentArray(0xDB)
 
 	For $i = 1 To $aAgentArray[0]
-		If (GetIsDead($aAgentArray[$i] == True)) Then ContinueLoop
-		If GetAgentInfo($aAgentArray[$i], 'HP') <= 0 Then ContinueLoop
+		If BitAND(DllStructGetData($aAgentArray[$i], 'Effects'), 0x0010) > 0 Then ContinueLoop
+		If DllStructGetData($aAgentArray[$i], 'HP') <= 0 Then ContinueLoop
 		If Not GetIsLiving($aAgentArray[$i]) Then ContinueLoop
-		If GetAgentInfo($aAgentArray[$i], "Allegiance") > 3 Then ContinueLoop ; ignore NPCs, spirits, minions, pets
-		If GetTarget(GetAgentInfo($aAgentArray[$i], "ID")) == GetAgentInfo($aAgent, "ID") Then
+		If DllStructGetData($aAgentArray[$i], "Allegiance") > 3 Then ContinueLoop ; ignore NPCs, spirits, minions, pets
+		If GetTarget(DllStructGetData($aAgentArray[$i], "ID")) == DllStructGetData($aAgent, "ID") Then
 			If GetDistance($aAgentArray[$i], $aAgent) < 5000 Then
-				If GetAgentInfo($aAgentArray[$i], "Team") <> 0 Then
-					If GetAgentInfo($aAgentArray[$i], "Team") <> GetAgentInfo($aAgent, "Team") Then
+				If DllStructGetData($aAgentArray[$i], "Team") <> 0 Then
+					If DllStructGetData($aAgentArray[$i], "Team") <> DllStructGetData($aAgent, "Team") Then
 						$lCount += 1
 					EndIf
-				ElseIf GetAgentInfo($aAgentArray[$i], "Allegiance") <> GetAgentInfo($aAgent, "Allegiance") Then
+				ElseIf DllStructGetData($aAgentArray[$i], "Allegiance") <> DllStructGetData($aAgent, "Allegiance") Then
 					$lCount += 1
 				EndIf
 			EndIf
@@ -3853,43 +3310,51 @@ EndFunc   ;==>GetAgentDanger
 #Region AgentInfo
 ;~ Description: Tests if an agent is living.
 Func GetIsLiving($aAgent)
-	Return GetAgentInfo($aAgent, 'Type') = 0xDB
+	If IsDllStruct($aAgent) = 0 Then $aAgent = GetAgentByID($aAgent)
+	Return DllStructGetData($aAgent, 'Type') = 0xDB
 EndFunc   ;==>GetIsLiving
 
 ;~ Description: Tests if an agent is a signpost/chest/etc.
 Func GetIsStatic($aAgent)
-	Return GetAgentInfo($aAgent, 'Type') = 0x200
+	If IsDllStruct($aAgent) = 0 Then $aAgent = GetAgentByID($aAgent)
+	Return DllStructGetData($aAgent, 'Type') = 0x200
 EndFunc   ;==>GetIsStatic
 
 ;~ Description: Tests if an agent is an item.
 Func GetIsMovable($aAgent)
-	Return GetAgentInfo($aAgent, 'Type') = 0x400
+	If IsDllStruct($aAgent) = 0 Then $aAgent = GetAgentByID($aAgent)
+	Return DllStructGetData($aAgent, 'Type') = 0x400
 EndFunc   ;==>GetIsMovable
 
 ;~ Description: Returns energy of an agent. (Only self/heroes)
 Func GetEnergy($aAgent = -2)
-	Return GetAgentInfo($aAgent, 'EnergyPercent') * GetAgentInfo($aAgent, 'MaxEnergy')
+	If IsDllStruct($aAgent) = 0 Then $aAgent = GetAgentByID($aAgent)
+	Return DllStructGetData($aAgent, 'EnergyPercent') * DllStructGetData($aAgent, 'MaxEnergy')
 EndFunc   ;==>GetEnergy
 
 ;~ Description: Returns health of an agent. (Must have caused numerical change in health)
 Func GetHealth($aAgent = -2)
-	Return GetAgentInfo($aAgent, 'HP') * GetAgentInfo($aAgent, 'MaxHP')
+	If IsDllStruct($aAgent) = 0 Then $aAgent = GetAgentByID($aAgent)
+	Return DllStructGetData($aAgent, 'HP') * DllStructGetData($aAgent, 'MaxHP')
 EndFunc   ;==>GetHealth
 
 ;~ Description: Tests if an agent is moving.
 Func GetIsMoving($aAgent)
-	If GetAgentInfo($aAgent, 'MoveX') <> 0 Or GetAgentInfo($aAgent, 'MoveY') <> 0 Then Return True
+	If IsDllStruct($aAgent) = 0 Then $aAgent = GetAgentByID($aAgent)
+	If DllStructGetData($aAgent, 'MoveX') <> 0 Or DllStructGetData($aAgent, 'MoveY') <> 0 Then Return True
 	Return False
 EndFunc   ;==>GetIsMoving
 
 ;~ Description: Tests if an agent is knocked down.
 Func GetIsKnocked($aAgent)
-	Return GetAgentInfo($aAgent, 'ModelState') = 0x450
+	If IsDllStruct($aAgent) = 0 Then $aAgent = GetAgentByID($aAgent)
+	Return DllStructGetData($aAgent, 'ModelState') = 0x450
 EndFunc   ;==>GetIsKnocked
 
 ;~ Description: Tests if an agent is attacking.
 Func GetIsAttacking($aAgent)
-	Switch GetAgentInfo($aAgent, 'ModelState')
+	If IsDllStruct($aAgent) = 0 Then $aAgent = GetAgentByID($aAgent)
+	Switch DllStructGetData($aAgent, 'ModelState')
 		Case 0x60 ; Is Attacking
 			Return True
 		Case 0x440 ; Is Attacking
@@ -3903,62 +3368,74 @@ EndFunc   ;==>GetIsAttacking
 
 ;~ Description: Tests if an agent is casting.
 Func GetIsCasting($aAgent)
-	Return GetAgentInfo($aAgent, 'Skill') <> 0
+	If IsDllStruct($aAgent) = 0 Then $aAgent = GetAgentByID($aAgent)
+	Return DllStructGetData($aAgent, 'Skill') <> 0
 EndFunc   ;==>GetIsCasting
 
 ;~ Description: Tests if an agent is bleeding.
 Func GetIsBleeding($aAgent)
-	Return BitAND(GetAgentInfo($aAgent, 'Effects'), 0x0001) > 0
+	If IsDllStruct($aAgent) = 0 Then $aAgent = GetAgentByID($aAgent)
+	Return BitAND(DllStructGetData($aAgent, 'Effects'), 0x0001) > 0
 EndFunc   ;==>GetIsBleeding
 
 ;~ Description: Tests if an agent has a condition.
 Func GetHasCondition($aAgent)
-	Return BitAND(GetAgentInfo($aAgent, 'Effects'), 0x0002) > 0
+	If IsDllStruct($aAgent) = 0 Then $aAgent = GetAgentByID($aAgent)
+	Return BitAND(DllStructGetData($aAgent, 'Effects'), 0x0002) > 0
 EndFunc   ;==>GetHasCondition
 
 ;~ Description: Tests if an agent is dead.
 Func GetIsDead($aAgent)
-	Return BitAND(GetAgentInfo($aAgent, 'Effects'), 0x0010) > 0
+	If IsDllStruct($aAgent) = 0 Then $aAgent = GetAgentByID($aAgent)
+	Return BitAND(DllStructGetData($aAgent, 'Effects'), 0x0010) > 0
 EndFunc   ;==>GetIsDead
 
 ;~ Description: Tests if an agent has a deep wound.
 Func GetHasDeepWound($aAgent)
-	Return BitAND(GetAgentInfo($aAgent, 'Effects'), 0x0020) > 0
+	If IsDllStruct($aAgent) = 0 Then $aAgent = GetAgentByID($aAgent)
+	Return BitAND(DllStructGetData($aAgent, 'Effects'), 0x0020) > 0
 EndFunc   ;==>GetHasDeepWound
 
 ;~ Description: Tests if an agent is poisoned.
 Func GetIsPoisoned($aAgent)
-	Return BitAND(GetAgentInfo($aAgent, 'Effects'), 0x0040) > 0
+	If IsDllStruct($aAgent) = 0 Then $aAgent = GetAgentByID($aAgent)
+	Return BitAND(DllStructGetData($aAgent, 'Effects'), 0x0040) > 0
 EndFunc   ;==>GetIsPoisoned
 
 ;~ Description: Tests if an agent is enchanted.
 Func GetIsEnchanted($aAgent)
-	Return BitAND(GetAgentInfo($aAgent, 'Effects'), 0x0080) > 0
+	If IsDllStruct($aAgent) = 0 Then $aAgent = GetAgentByID($aAgent)
+	Return BitAND(DllStructGetData($aAgent, 'Effects'), 0x0080) > 0
 EndFunc   ;==>GetIsEnchanted
 
 ;~ Description: Tests if an agent has a degen hex.
 Func GetHasDegenHex($aAgent)
-	Return BitAND(GetAgentInfo($aAgent, 'Effects'), 0x0400) > 0
+	If IsDllStruct($aAgent) = 0 Then $aAgent = GetAgentByID($aAgent)
+	Return BitAND(DllStructGetData($aAgent, 'Effects'), 0x0400) > 0
 EndFunc   ;==>GetHasDegenHex
 
 ;~ Description: Tests if an agent is hexed.
 Func GetHasHex($aAgent)
-	Return BitAND(GetAgentInfo($aAgent, 'Effects'), 0x0800) > 0
+	If IsDllStruct($aAgent) = 0 Then $aAgent = GetAgentByID($aAgent)
+	Return BitAND(DllStructGetData($aAgent, 'Effects'), 0x0800) > 0
 EndFunc   ;==>GetHasHex
 
 ;~ Description: Tests if an agent has a weapon spell.
 Func GetHasWeaponSpell($aAgent)
-	Return BitAND(GetAgentInfo($aAgent, 'Effects'), 0x8000) > 0
+	If IsDllStruct($aAgent) = 0 Then $aAgent = GetAgentByID($aAgent)
+	Return BitAND(DllStructGetData($aAgent, 'Effects'), 0x8000) > 0
 EndFunc   ;==>GetHasWeaponSpell
 
 ;~ Description: Tests if an agent is a boss.
 Func GetIsBoss($aAgent)
-	Return BitAND(GetAgentInfo($aAgent, 'TypeMap'), 1024) > 0
+	If IsDllStruct($aAgent) = 0 Then $aAgent = GetAgentByID($aAgent)
+	Return BitAND(DllStructGetData($aAgent, 'TypeMap'), 1024) > 0
 EndFunc   ;==>GetIsBoss
 
 ;~ Description: Returns a player's name.
 Func GetPlayerName($aAgent)
-	Local $lLogin = GetAgentInfo($aAgent, 'LoginNumber')
+	If IsDllStruct($aAgent) = 0 Then $aAgent = GetAgentByID($aAgent)
+	Local $lLogin = DllStructGetData($aAgent, 'LoginNumber')
 	Local $lOffset[6] = [0, 0x18, 0x2C, 0x80C, 76 * $lLogin + 0x28, 0]
 	Local $lReturn = MemoryReadPtr($mBasePointer, $lOffset, 'wchar[30]')
 	Return $lReturn[1]
@@ -3966,7 +3443,16 @@ EndFunc   ;==>GetPlayerName
 
 ;~ Description: Returns the name of an agent.
 Func GetAgentName($aAgent)
-	Local $lAddress = $mStringLogBase + 256 * ConvertID($aAgent)
+	If $mUseStringLog = False Then Return
+
+	If IsDllStruct($aAgent) = 0 Then
+		Local $lAgentID = ConvertID($aAgent)
+		If $lAgentID = 0 Then Return ''
+	Else
+		Local $lAgentID = DllStructGetData($aAgent, 'ID')
+	EndIf
+
+	Local $lAddress = $mStringLogBase + 256 * $lAgentID
 	Local $lName = MemoryRead($lAddress, 'wchar [128]')
 
 	If $lName = '' Then
@@ -4005,87 +3491,80 @@ EndFunc   ;==>GetBuffCount
 
 ;~ Description: Tests if you are currently maintaining buff on target.
 Func GetIsTargetBuffed($aSkillID, $aAgentID, $aHeroNumber = 0)
-    Local $lBuffCount = GetBuffCount($aHeroNumber)
-    Local $lBuffStructAddress
-    Local $lOffset[4]
-    $lOffset[0] = 0
-    $lOffset[1] = 0x18
-    $lOffset[2] = 0x2C
-    $lOffset[3] = 0x510
-    Local $lCount = MemoryReadPtr($mBasePointer, $lOffset)
-    ReDim $lOffset[5]
-    $lOffset[3] = 0x508
-    Local $lBuffer
-
-    For $i = 0 To $lCount[1] - 1
-        $lOffset[4] = 0x24 * $i
-        $lBuffer = MemoryReadPtr($mBasePointer, $lOffset)
-        If $lBuffer[1] == GetHeroID($aHeroNumber) Then
-            $lOffset[4] = 0x4 + 0x24 * $i
-            ReDim $lOffset[6]
-            For $j = 0 To $lBuffCount - 1
-                $lOffset[5] = 0 + 0x10 * $j
-                $lBuffStructAddress = MemoryReadPtr($mBasePointer, $lOffset)
-                DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $lBuffStructAddress[0], 'ptr', DllStructGetPtr($g_BuffStruct), 'int', DllStructGetSize($g_BuffStruct), 'int', '')
-
-                If (DllStructGetData($g_BuffStruct, 'SkillID') == $aSkillID) And (DllStructGetData($g_BuffStruct, 'TargetId') == ConvertID($aAgentID)) Then
-                    Return $j + 1
-                EndIf
-            Next
-        EndIf
-    Next
-
-    Return 0
+	Local $lBuffStruct = DllStructCreate('long SkillId;byte unknown1[4];long BuffId;long TargetId')
+	Local $lBuffCount = GetBuffCount($aHeroNumber)
+	Local $lBuffStructAddress
+	Local $lOffset[4]
+	$lOffset[0] = 0
+	$lOffset[1] = 0x18
+	$lOffset[2] = 0x2C
+	$lOffset[3] = 0x510
+	Local $lCount = MemoryReadPtr($mBasePointer, $lOffset)
+	ReDim $lOffset[5]
+	$lOffset[3] = 0x508
+	Local $lBuffer
+	For $i = 0 To $lCount[1] - 1
+		$lOffset[4] = 0x24 * $i
+		$lBuffer = MemoryReadPtr($mBasePointer, $lOffset)
+		If $lBuffer[1] == GetHeroID($aHeroNumber) Then
+			$lOffset[4] = 0x4 + 0x24 * $i
+			ReDim $lOffset[6]
+			For $j = 0 To $lBuffCount - 1
+				$lOffset[5] = 0 + 0x10 * $j
+				$lBuffStructAddress = MemoryReadPtr($mBasePointer, $lOffset)
+				DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $lBuffStructAddress[0], 'ptr', DllStructGetPtr($lBuffStruct), 'int', DllStructGetSize($lBuffStruct), 'int', '')
+				If (DllStructGetData($lBuffStruct, 'SkillID') == $aSkillID) And (DllStructGetData($lBuffStruct, 'TargetId') == ConvertID($aAgentID)) Then
+					Return $j + 1
+				EndIf
+			Next
+		EndIf
+	Next
+	Return 0
 EndFunc   ;==>GetIsTargetBuffed
 
 ;~ Description: Returns buff struct.
 Func GetBuffByIndex($aBuffNumber, $aHeroNumber = 0)
-    Local $lOffset[4]
-    $lOffset[0] = 0
-    $lOffset[1] = 0x18
-    $lOffset[2] = 0x2C
-    $lOffset[3] = 0x510
-    Local $lCount = MemoryReadPtr($mBasePointer, $lOffset)
-    ReDim $lOffset[5]
-    $lOffset[3] = 0x508
-    Local $lBuffer
-
-    For $i = 0 To $lCount[1] - 1
-        $lOffset[4] = 0x24 * $i
-        $lBuffer = MemoryReadPtr($mBasePointer, $lOffset)
-        If $lBuffer[1] == GetHeroID($aHeroNumber) Then
-            $lOffset[4] = 0x4 + 0x24 * $i
-            ReDim $lOffset[6]
-            $lOffset[5] = 0 + 0x10 * ($aBuffNumber - 1)
-            $lBuffStructAddress = MemoryReadPtr($mBasePointer, $lOffset)
-            DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $lBuffStructAddress[0], 'ptr', DllStructGetPtr($g_BuffStruct), 'int', DllStructGetSize($g_BuffStruct), 'int', '')
-
-            Return $g_BuffStruct
-        EndIf
-    Next
-
-    Return 0
+	Local $lBuffStruct = DllStructCreate('long SkillId;byte unknown1[4];long BuffId;long TargetId')
+	Local $lOffset[4]
+	$lOffset[0] = 0
+	$lOffset[1] = 0x18
+	$lOffset[2] = 0x2C
+	$lOffset[3] = 0x510
+	Local $lCount = MemoryReadPtr($mBasePointer, $lOffset)
+	ReDim $lOffset[5]
+	$lOffset[3] = 0x508
+	Local $lBuffer
+	For $i = 0 To $lCount[1] - 1
+		$lOffset[4] = 0x24 * $i
+		$lBuffer = MemoryReadPtr($mBasePointer, $lOffset)
+		If $lBuffer[1] == GetHeroID($aHeroNumber) Then
+			$lOffset[4] = 0x4 + 0x24 * $i
+			ReDim $lOffset[6]
+			$lOffset[5] = 0 + 0x10 * ($aBuffNumber - 1)
+			$lBuffStructAddress = MemoryReadPtr($mBasePointer, $lOffset)
+			DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $lBuffStructAddress[0], 'ptr', DllStructGetPtr($lBuffStruct), 'int', DllStructGetSize($lBuffStruct), 'int', '')
+			Return $lBuffStruct
+		EndIf
+	Next
+	Return 0
 EndFunc   ;==>GetBuffByIndex
 #EndRegion Buff
 
 #Region Misc
 ;~ Description: Returns skillbar struct.
 Func GetSkillbar($aHeroNumber = 0)
-    Local $lOffset[5]
-    $lOffset[0] = 0
-    $lOffset[1] = 0x18
-    $lOffset[2] = 0x2C
-    $lOffset[3] = 0x6F0
-
-    For $i = 0 To GetHeroCount()
-        $lOffset[4] = $i * 0xBC
-        Local $lSkillbarStructAddress = MemoryReadPtr($mBasePointer, $lOffset)
-        DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $lSkillbarStructAddress[0], 'ptr', DllStructGetPtr($g_SkillbarStruct), 'int', DllStructGetSize($g_SkillbarStruct), 'int', '')
-
-        If DllStructGetData($g_SkillbarStruct, 'AgentId') == GetHeroID($aHeroNumber) Then
-            Return $g_SkillbarStruct
-        EndIf
-    Next
+	Local $lSkillbarStruct = DllStructCreate('long AgentId;long AdrenalineA1;long AdrenalineB1;dword Recharge1;dword Id1;dword Event1;long AdrenalineA2;long AdrenalineB2;dword Recharge2;dword Id2;dword Event2;long AdrenalineA3;long AdrenalineB3;dword Recharge3;dword Id3;dword Event3;long AdrenalineA4;long AdrenalineB4;dword Recharge4;dword Id4;dword Event4;long AdrenalineA5;long AdrenalineB5;dword Recharge5;dword Id5;dword Event5;long AdrenalineA6;long AdrenalineB6;dword Recharge6;dword Id6;dword Event6;long AdrenalineA7;long AdrenalineB7;dword Recharge7;dword Id7;dword Event7;long AdrenalineA8;long AdrenalineB8;dword Recharge8;dword Id8;dword Event8;dword disabled;byte unknown[8];dword Casting')
+	Local $lOffset[5]
+	$lOffset[0] = 0
+	$lOffset[1] = 0x18
+	$lOffset[2] = 0x2C
+	$lOffset[3] = 0x6F0
+	For $i = 0 To GetHeroCount()
+		$lOffset[4] = $i * 0xBC
+		Local $lSkillbarStructAddress = MemoryReadPtr($mBasePointer, $lOffset)
+		DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $lSkillbarStructAddress[0], 'ptr', DllStructGetPtr($lSkillbarStruct), 'int', DllStructGetSize($lSkillbarStruct), 'int', '')
+		If DllStructGetData($lSkillbarStruct, 'AgentId') == GetHeroID($aHeroNumber) Then Return $lSkillbarStruct
+	Next
 EndFunc   ;==>GetSkillbar
 
 ;~ Description: Returns the skill ID of an equipped skill.
@@ -4107,11 +3586,10 @@ EndFunc   ;==>GetSkillbarSkillRecharge
 
 ;~ Description: Returns skill struct.
 Func GetSkillByID($aSkillID)
-    Local $lSkillStructAddress = $mSkillBase + (160 * $aSkillID)
-
-    DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $lSkillStructAddress, 'ptr', DllStructGetPtr($g_SkillStruct), 'int', DllStructGetSize($g_SkillStruct), 'int', '')
-
-	Return $g_SkillStruct
+	Local $lSkillStruct = DllStructCreate('long ID;byte Unknown1[4];long campaign;long Type;long Special;long ComboReq;long Effect1;long Condition;long Effect2;long WeaponReq;byte Profession;byte Attribute;byte Unknown2[2];long PvPID;byte Combo;byte Target;byte unknown3;byte EquipType;byte Unknown4[4];dword Adrenaline;float Activation;float Aftercast;long Duration0;long Duration15;long Recharge;byte Unknown5[12];long Scale0;long Scale15;long BonusScale0;long BonusScale15;float AoERange;float ConstEffect;byte unknown6[44]')
+	Local $lSkillStructAddress = $mSkillBase + 160 * $aSkillID
+	DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $lSkillStructAddress, 'ptr', DllStructGetPtr($lSkillStruct), 'int', DllStructGetSize($lSkillStruct), 'int', '')
+	Return $lSkillStruct
 EndFunc   ;==>GetSkillByID
 
 ;~ Description: Returns current morale.
@@ -4134,79 +3612,53 @@ Func GetMorale($aHeroNumber = 0)
 	Return $lReturn[1] - 100
 EndFunc   ;==>GetMorale
 
-;~ Description: Returns Attribute struct.
-Func GetAttributeInfoByID($aAttributeID)
-    Local $lAttributeStructAddress = $mAttributeInfo + (0x14 * $aAttributeID)
-    DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $lAttributeStructAddress, 'ptr', DllStructGetPtr($g_AttributeStruct), 'int', DllStructGetSize($g_AttributeStruct), 'int', '')
-    Return $g_AttributeStruct
-EndFunc   ;==>GetAttributeInfoByID
-
-Func GetAttributeProfession($aAttributeID)
-    Local $lAttributeInfo = GetAttributeInfoByID($aAttributeID)
-    Return DllStructGetData($lAttributeInfo, "profession_id")
-EndFunc
-
-Func GetAttributeNameID($aAttributeID)
-    Local $lAttributeInfo = GetAttributeInfoByID($aAttributeID)
-    Return DllStructGetData($lAttributeInfo, "name_id")
-EndFunc
-
-Func GetAttributeIsPvE($aAttributeID)
-    Local $lAttributeInfo = GetAttributeInfoByID($aAttributeID)
-    Return DllStructGetData($lAttributeInfo, "is_pve")
-EndFunc
-
-#Region Effects
 ;~ Description: Returns effect struct or array of effects.
 Func GetEffect($aSkillID = 0, $aHeroNumber = 0)
-    Local $lEffectCount, $lEffectStructAddress
-    Local $lReturnArray[1] = [0]
+	Local $lEffectCount, $lEffectStructAddress
+	Local $lReturnArray[1] = [0]
 
-    Local $lOffset[4]
-    $lOffset[0] = 0
-    $lOffset[1] = 0x18
-    $lOffset[2] = 0x2C
-    $lOffset[3] = 0x510
-    Local $lCount = MemoryReadPtr($mBasePointer, $lOffset)
-    ReDim $lOffset[5]
-    $lOffset[3] = 0x508
-    Local $lBuffer
+	Local $lOffset[4]
+	$lOffset[0] = 0
+	$lOffset[1] = 0x18
+	$lOffset[2] = 0x2C
+	$lOffset[3] = 0x510
+	Local $lCount = MemoryReadPtr($mBasePointer, $lOffset)
+	ReDim $lOffset[5]
+	$lOffset[3] = 0x508
+	Local $lBuffer
+	For $i = 0 To $lCount[1] - 1
+		$lOffset[4] = 0x24 * $i
+		$lBuffer = MemoryReadPtr($mBasePointer, $lOffset)
+		If $lBuffer[1] == GetHeroID($aHeroNumber) Then
+			$lOffset[4] = 0x1C + 0x24 * $i
+			$lEffectCount = MemoryReadPtr($mBasePointer, $lOffset)
+			ReDim $lOffset[6]
+			$lOffset[4] = 0x14 + 0x24 * $i
+			$lOffset[5] = 0
+			$lEffectStructAddress = MemoryReadPtr($mBasePointer, $lOffset)
 
-    For $i = 0 To $lCount[1] - 1
-        $lOffset[4] = 0x24 * $i
-        $lBuffer = MemoryReadPtr($mBasePointer, $lOffset)
-        If $lBuffer[1] == GetHeroID($aHeroNumber) Then
-            $lOffset[4] = 0x1C + 0x24 * $i
-            $lEffectCount = MemoryReadPtr($mBasePointer, $lOffset)
-            ReDim $lOffset[6]
-            $lOffset[4] = 0x14 + 0x24 * $i
-            $lOffset[5] = 0
-            $lEffectStructAddress = MemoryReadPtr($mBasePointer, $lOffset)
+			If $aSkillID = 0 Then
+				ReDim $lReturnArray[$lEffectCount[1] + 1]
+				$lReturnArray[0] = $lEffectCount[1]
 
-            If $aSkillID = 0 Then
-                ReDim $lReturnArray[$lEffectCount[1] + 1]
-                $lReturnArray[0] = $lEffectCount[1]
+				For $i = 0 To $lEffectCount[1] - 1
+					$lReturnArray[$i + 1] = DllStructCreate('long SkillId;long EffectType;long EffectId;long AgentId;float Duration;long TimeStamp')
+					$lEffectStructAddress[1] = $lEffectStructAddress[0] + 24 * $i
+					DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $lEffectStructAddress[1], 'ptr', DllStructGetPtr($lReturnArray[$i + 1]), 'int', 24, 'int', '')
+				Next
 
-                For $i = 0 To $lEffectCount[1] - 1
-                    $lReturnArray[$i + 1] = DllStructCreate('long SkillId;long AttributeLevel;long EffectId;long AgentId;float Duration;long TimeStamp')
-                    $lEffectStructAddress[1] = $lEffectStructAddress[0] + 24 * $i
-                    DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $lEffectStructAddress[1], 'ptr', DllStructGetPtr($lReturnArray[$i + 1]), 'int', 24, 'int', '')
-                Next
+				ExitLoop
+			Else
+				Local $lReturn = DllStructCreate('long SkillId;long EffectType;long EffectId;long AgentId;float Duration;long TimeStamp')
 
-                ExitLoop
-            Else
-                For $i = 0 To $lEffectCount[1] - 1
-                    DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $lEffectStructAddress[0] + 24 * $i, 'ptr', DllStructGetPtr($g_EffectStruct), 'int', 24, 'int', '')
-
-                    If DllStructGetData($g_EffectStruct, 'SkillID') = $aSkillID Then
-                        Return $g_EffectStruct
-                    EndIf
-                Next
-            EndIf
-        EndIf
-    Next
-
-    Return $lReturnArray
+				For $i = 0 To $lEffectCount[1] - 1
+					DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $lEffectStructAddress[0] + 24 * $i, 'ptr', DllStructGetPtr($lReturn), 'int', 24, 'int', '')
+					If DllStructGetData($lReturn, 'SkillID') = $aSkillID Then Return $lReturn
+				Next
+			EndIf
+		EndIf
+	Next
+	Return $lReturnArray
 EndFunc   ;==>GetEffect
 
 ;~ Description: Returns time remaining before an effect expires, in milliseconds.
@@ -4216,7 +3668,6 @@ Func GetEffectTimeRemaining($aEffect)
 	Return DllStructGetData($aEffect, 'Duration') * 1000
 ;~ 	Return DllStructGetData($aEffect, 'Duration') * 1000 - (GetSkillTimer() - DllStructGetData($aEffect, 'TimeStamp'))
 EndFunc   ;==>GetEffectTimeRemaining
-#EndRegion Effects
 
 ;~ Description: Returns the timestamp used for effects and skills (milliseconds).
 Func GetSkillTimer()
@@ -4233,13 +3684,13 @@ Func GetAttributeByID($aAttributeID, $aWithRunes = False, $aHeroNumber = 0)
 	$lOffset[2] = 0x2C
 	$lOffset[3] = 0xAC
 	For $i = 0 To GetHeroCount()
-		$lOffset[4] = 0x43C * $i
+		$lOffset[4] = 0x3D8 * $i
 		$lBuffer = MemoryReadPtr($mBasePointer, $lOffset)
 		If $lBuffer[1] == $lAgentID Then
 			If $aWithRunes Then
-				$lOffset[4] = 0x43C * $i + 0x14 * $aAttributeID + 0xC
+				$lOffset[4] = 0x3D8 * $i + 0x14 * $aAttributeID + 0xC
 			Else
-				$lOffset[4] = 0x43C * $i + 0x14 * $aAttributeID + 0x8
+				$lOffset[4] = 0x3D8 * $i + 0x14 * $aAttributeID + 0x8
 			EndIf
 			$lBuffer = MemoryReadPtr($mBasePointer, $lOffset)
 			Return $lBuffer[1]
@@ -4284,15 +3735,12 @@ EndFunc   ;==>GetMaxAgents
 
 ;~ Description: Returns your agent ID.
 Func GetMyID()
-	Local $lOffset[5] = [0, 0x18, 0x2C, 0x680, 0x14]
-	Local $lReturn = MemoryReadPtr($mBasePointer, $lOffset)
-	Return $lReturn[1]
-;~ 	Return MemoryRead($mMyID)
+	Return MemoryRead($mMyID)
 EndFunc   ;==>GetMyID
 
 ;~ Description: Returns current target.
 Func GetCurrentTarget()
-	Return GetAgentPtr(GetCurrentTargetID())
+	Return GetAgentByID(GetCurrentTargetID())
 EndFunc   ;==>GetCurrentTarget
 
 ;~ Description: Returns current target ID.
@@ -4307,46 +3755,13 @@ EndFunc   ;==>GetPing
 
 ;~ Description: Returns current map ID.
 Func GetMapID()
-	Local $lOffset[4] = [0, 0x18, 0x44, 0x22C]
-	Local $lReturn = MemoryReadPtr($mBasePointer, $lOffset)
-	Return $lReturn[1]
-;~ 	Return MemoryRead($mMapID)
+	Return MemoryRead($mMapID)
 EndFunc   ;==>GetMapID
 
 ;~ Description: Returns current load-state.
-;~ Func GetMapLoading()
-;~ 	Return MemoryRead($mMapLoading)
-;~ EndFunc   ;==>GetInstanceType
-
-Func GetInstanceType()
-	Local $lOffset[1] = [0x4]
-	Local $lResult = MemoryReadPtr($mInstanceInfo, $lOffset, "dword")
-	Return $lResult[1]
-EndFunc
-
-Func GetAreaInfoByID($aMapID = 0)
-    If $aMapID = 0 Then $aMapID = GetMapID()
-
-    Local $lAreaInfoAddress = $mAreaInfo + (0x7C * $aMapID)
-    DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $lAreaInfoAddress, 'ptr', DllStructGetPtr($g_AreaInfoStruct), 'int', DllStructGetSize($g_AreaInfoStruct), 'int', '')
-
-    Return $g_AreaInfoStruct
-EndFunc
-
-Func GetMapCampaign($aMapID = 0)
-	Local $lMapStruct = GetAreaInfoByID($aMapID)
-    Return DllStructGetData($lMapStruct, "campaign")
-EndFunc
-
-Func GetMapRegion($aMapID = 0)
-	Local $lMapStruct = GetAreaInfoByID($aMapID)
-    Return DllStructGetData($lMapStruct, "region")
-EndFunc
-
-Func GetMapRegionType($aMapID = 0)
-	Local $lMapStruct = GetAreaInfoByID($aMapID)
-    Return DllStructGetData($lMapStruct, "regiontype")
-EndFunc
+Func GetMapLoading()
+	Return MemoryRead($mMapLoading)
+EndFunc   ;==>GetMapLoading
 
 ;~ Description: Returns if map has been loaded. Reset with InitMapLoad().
 Func GetMapIsLoaded()
@@ -4356,7 +3771,7 @@ EndFunc   ;==>GetMapIsLoaded
 
 ;~ Description: Returns current district
 Func GetDistrict()
-	Local $lOffset[4] = [0, 0x18, 0x44, 0x220]
+	Local $lOffset[4] = [0, 0x18, 0x44, 0x1B4]
 	Local $lResult = MemoryReadPtr($mBasePointer, $lOffset)
 	Return $lResult[1]
 EndFunc   ;==>GetDistrict
@@ -4368,14 +3783,12 @@ EndFunc   ;==>GetRegion
 
 ;~ Description: Internal use for travel functions.
 Func GetLanguage()
-	Local $lOffset[] = [0, 0x18, 0x44, 0x228]
-	Local $lReturn = MemoryReadPtr($mBasePointer, $lOffset)
-	Return $lReturn[1]
-;~ 	Return MemoryRead($mLanguage)
+	Return MemoryRead($mLanguage)
 EndFunc   ;==>GetLanguage
 
 ;~ Description: Returns quest struct.
 Func GetQuestByID($aQuestID = 0)
+	Local $lQuestStruct = DllStructCreate('long id;long LogState;byte unknown1[12];long MapFrom;float X;float Y;byte unknown2[8];long MapTo;long Reward;long Objective')
 	Local $lQuestPtr, $lQuestLogSize, $lQuestID
 	Local $lOffset[4] = [0, 0x18, 0x2C, 0x534]
 
@@ -4395,8 +3808,8 @@ Func GetQuestByID($aQuestID = 0)
 	For $i = 0 To $lQuestLogSize[1]
 		$lOffset[4] = 0x34 * $i
 		$lQuestPtr = MemoryReadPtr($mBasePointer, $lOffset)
-		DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $lQuestPtr[0], 'ptr', DllStructGetPtr($g_QuestStruct), 'int', DllStructGetSize($g_QuestStruct), 'int', '')
-		If DllStructGetData($g_QuestStruct, 'ID') = $lQuestID Then Return $g_QuestStruct
+		DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $lQuestPtr[0], 'ptr', DllStructGetPtr($lQuestStruct), 'int', DllStructGetSize($lQuestStruct), 'int', '')
+		If DllStructGetData($lQuestStruct, 'ID') = $lQuestID Then Return $lQuestStruct
 	Next
 EndFunc   ;==>GetQuestByID
 
@@ -4409,12 +3822,6 @@ EndFunc   ;==>GetCharname
 Func GetLoggedIn()
 	Return MemoryRead($mLoggedIn)
 EndFunc   ;==>GetLoggedIn
-
-;Currently uncommented since i dont know if it works
-;~ Description: Returns the number of character slots you have. Only works on character select.
-;~Func GetCharacterSlots()
-;~	Return MemoryRead($mCharslots)
-;~EndFunc   ;==>GetLoggedIn
 
 ;~ Description: Returns language currently being used.
 Func GetDisplayLanguage()
@@ -4491,12 +3898,14 @@ EndFunc   ;==>ComputeDistance
 
 ;~ Description: Returns the distance between two agents.
 Func GetDistance($aAgent1 = -1, $aAgent2 = -2)
-	Return Sqrt((GetAgentInfo($aAgent1, 'X') - GetAgentInfo($aAgent2, 'X')) ^ 2 + (GetAgentInfo($aAgent1, 'Y') - GetAgentInfo($aAgent2, 'Y')) ^ 2)
+	If IsDllStruct($aAgent1) = 0 Then $aAgent1 = GetAgentByID($aAgent1)
+	If IsDllStruct($aAgent2) = 0 Then $aAgent2 = GetAgentByID($aAgent2)
+	Return Sqrt((DllStructGetData($aAgent1, 'X') - DllStructGetData($aAgent2, 'X')) ^ 2 + (DllStructGetData($aAgent1, 'Y') - DllStructGetData($aAgent2, 'Y')) ^ 2)
 EndFunc   ;==>GetDistance
 
 ;~ Description: Return the square of the distance between two agents.
 Func GetPseudoDistance($aAgent1, $aAgent2)
-	Return (GetAgentInfo($aAgent1, 'X') - GetAgentInfo($aAgent2, 'X')) ^ 2 + (GetAgentInfo($aAgent1, 'Y') - GetAgentInfo($aAgent2, 'Y')) ^ 2
+	Return (DllStructGetData($aAgent1, 'X') - DllStructGetData($aAgent2, 'X')) ^ 2 + (DllStructGetData($aAgent1, 'Y') - DllStructGetData($aAgent2, 'Y')) ^ 2
 EndFunc   ;==>GetPseudoDistance
 
 ;~ Description: Checks if a point is within a polygon defined by an array
@@ -4506,9 +3915,9 @@ Func GetIsPointInPolygon($aAreaCoords, $aPosX = 0, $aPosY = 0)
 	Local $lOddNodes = False
 	If $lEdges < 3 Then Return False
 	If $aPosX = 0 Then
-		Local $lAgent = GetAgentPtr(-2)
-		$aPosX = GetAgentInfo($lAgent, 'X')
-		$aPosY = GetAgentInfo($lAgent, 'Y')
+		Local $lAgent = GetAgentByID(-2)
+		$aPosX = DllStructGetData($lAgent, 'X')
+		$aPosY = DllStructGetData($lAgent, 'Y')
 	EndIf
 	$j = $lEdges - 1
 	For $i = 0 To $lEdges - 1
@@ -4526,18 +3935,13 @@ EndFunc   ;==>GetIsPointInPolygon
 
 ;~ Description: Internal use for handing -1 and -2 agent IDs.
 Func ConvertID($aID)
-	Select
-		Case $aID = -2
-			Return GetMyID()
-		Case $aID = -1
-			Return GetCurrentTargetID()
-		Case IsPtr($aID) <> 0
-			Return MemoryRead($aID + 0x2C, 'long')
-		Case IsDllStruct($aID) <> 0
-			Return DllStructGetData($aID, 'ID')
-		Case Else
-			Return $aID
-	EndSelect
+	If $aID = -2 Then
+		Return GetMyID()
+	ElseIf $aID = -1 Then
+		Return GetCurrentTargetID()
+	Else
+		Return $aID
+	EndIf
 EndFunc   ;==>ConvertID
 
 Func InviteGuild($charName)
@@ -4572,7 +3976,7 @@ EndFunc   ;==>InviteGuest
 
 ;~ Description: Internal use only.
 Func SendPacket($aSize, $aHeader, $aParam1 = 0, $aParam2 = 0, $aParam3 = 0, $aParam4 = 0, $aParam5 = 0, $aParam6 = 0, $aParam7 = 0, $aParam8 = 0, $aParam9 = 0, $aParam10 = 0)
-	;If GetAgentExists(-2) Then
+	If GetAgentExists(-2) Then
 		DllStructSetData($mPacket, 2, $aSize)
 		DllStructSetData($mPacket, 3, $aHeader)
 		DllStructSetData($mPacket, 4, $aParam1)
@@ -4587,9 +3991,9 @@ Func SendPacket($aSize, $aHeader, $aParam1 = 0, $aParam2 = 0, $aParam3 = 0, $aPa
 		DllStructSetData($mPacket, 13, $aParam10)
 		Enqueue($mPacketPtr, 52)
 		Return True
-	;Else
-	;	Return False
-	;EndIf
+	Else
+		Return False
+	EndIf
 EndFunc   ;==>SendPacket
 
 ;~ Description: Internal use only.
@@ -4618,137 +4022,136 @@ EndFunc   ;==>Bin64ToDec
 ;~ Description: Internal use only.
 Func Base64ToBin64($aCharacter)
 	Select
-		Case $aCharacter == 'A'
-			Return '000000'
-		Case $aCharacter == 'B'
-			Return '100000'
-		Case $aCharacter == 'C'
-			Return '010000'
-		Case $aCharacter == 'D'
-			Return '110000'
-		Case $aCharacter == 'E'
-			Return '001000'
-		Case $aCharacter == 'F'
-			Return '101000'
-		Case $aCharacter == 'G'
-			Return '011000'
-		Case $aCharacter == 'H'
-			Return '111000'
-		Case $aCharacter == 'I'
-			Return '000100'
-		Case $aCharacter == 'J'
-			Return '100100'
-		Case $aCharacter == 'K'
-			Return '010100'
-		Case $aCharacter == 'L'
-			Return '110100'
-		Case $aCharacter == 'M'
-			Return '001100'
-		Case $aCharacter == 'N'
-			Return '101100'
-		Case $aCharacter == 'O'
-			Return '011100'
-		Case $aCharacter == 'P'
-			Return '111100'
-		Case $aCharacter == 'Q'
-			Return '000010'
-		Case $aCharacter == 'R'
-			Return '100010'
-		Case $aCharacter == 'S'
-			Return '010010'
-		Case $aCharacter == 'T'
-			Return '110010'
-		Case $aCharacter == 'U'
-			Return '001010'
-		Case $aCharacter == 'V'
-			Return '101010'
-		Case $aCharacter == 'W'
-			Return '011010'
-		Case $aCharacter == 'X'
-			Return '111010'
-		Case $aCharacter == 'Y'
-			Return '000110'
-		Case $aCharacter == 'Z'
-			Return '100110'
-		Case $aCharacter == 'a'
-			Return '010110'
-		Case $aCharacter == 'b'
-			Return '110110'
-		Case $aCharacter == 'c'
-			Return '001110'
-		Case $aCharacter == 'd'
-			Return '101110'
-		Case $aCharacter == 'e'
-			Return '011110'
-		Case $aCharacter == 'f'
-			Return '111110'
-		Case $aCharacter == 'g'
-			Return '000001'
-		Case $aCharacter == 'h'
-			Return '100001'
-		Case $aCharacter == 'i'
-			Return '010001'
-		Case $aCharacter == 'j'
-			Return '110001'
-		Case $aCharacter == 'k'
-			Return '001001'
-		Case $aCharacter == 'l'
-			Return '101001'
-		Case $aCharacter == 'm'
-			Return '011001'
-		Case $aCharacter == 'n'
-			Return '111001'
-		Case $aCharacter == 'o'
-			Return '000101'
-		Case $aCharacter == 'p'
-			Return '100101'
-		Case $aCharacter == 'q'
-			Return '010101'
-		Case $aCharacter == 'r'
-			Return '110101'
-		Case $aCharacter == 's'
-			Return '001101'
-		Case $aCharacter == 't'
-			Return '101101'
-		Case $aCharacter == 'u'
-			Return '011101'
-		Case $aCharacter == 'v'
-			Return '111101'
-		Case $aCharacter == 'w'
-			Return '000011'
-		Case $aCharacter == 'x'
-			Return '100011'
-		Case $aCharacter == 'y'
-			Return '010011'
-		Case $aCharacter == 'z'
-			Return '110011'
-		Case $aCharacter == '0'
-			Return '001011'
-		Case $aCharacter == '1'
-			Return '101011'
-		Case $aCharacter == '2'
-			Return '011011'
-		Case $aCharacter == '3'
-			Return '111011'
-		Case $aCharacter == '4'
-			Return '000111'
-		Case $aCharacter == '5'
-			Return '100111'
-		Case $aCharacter == '6'
-			Return '010111'
-		Case $aCharacter == '7'
-			Return '110111'
-		Case $aCharacter == '8'
-			Return '001111'
-		Case $aCharacter == '9'
-			Return '101111'
-		Case $aCharacter == '+'
-			Return '011111'
-		Case $aCharacter == '/'
-			Return '111111'
+		Case $aCharacter == "A"
+			Return "000000"
+		Case $aCharacter == "B"
+			Return "100000"
+		Case $aCharacter == "C"
+			Return "010000"
+		Case $aCharacter == "D"
+			Return "110000"
+		Case $aCharacter == "E"
+			Return "001000"
+		Case $aCharacter == "F"
+			Return "101000"
+		Case $aCharacter == "G"
+			Return "011000"
+		Case $aCharacter == "H"
+			Return "111000"
+		Case $aCharacter == "I"
+			Return "000100"
+		Case $aCharacter == "J"
+			Return "100100"
+		Case $aCharacter == "K"
+			Return "010100"
+		Case $aCharacter == "L"
+			Return "110100"
+		Case $aCharacter == "M"
+			Return "001100"
+		Case $aCharacter == "N"
+			Return "101100"
+		Case $aCharacter == "O"
+			Return "011100"
+		Case $aCharacter == "P"
+			Return "111100"
+		Case $aCharacter == "Q"
+			Return "000010"
+		Case $aCharacter == "R"
+			Return "100010"
+		Case $aCharacter == "S"
+			Return "010010"
+		Case $aCharacter == "T"
+			Return "110010"
+		Case $aCharacter == "U"
+			Return "001010"
+		Case $aCharacter == "V"
+			Return "101010"
+		Case $aCharacter == "W"
+			Return "011010"
+		Case $aCharacter == "X"
+			Return "111010"
+		Case $aCharacter == "Y"
+			Return "000110"
+		Case $aCharacter == "Z"
+			Return "100110"
+		Case $aCharacter == "a"
+			Return "010110"
+		Case $aCharacter == "b"
+			Return "110110"
+		Case $aCharacter == "c"
+			Return "001110"
+		Case $aCharacter == "d"
+			Return "101110"
+		Case $aCharacter == "e"
+			Return "011110"
+		Case $aCharacter == "f"
+			Return "111110"
+		Case $aCharacter == "g"
+			Return "000001"
+		Case $aCharacter == "h"
+			Return "100001"
+		Case $aCharacter == "i"
+			Return "010001"
+		Case $aCharacter == "j"
+			Return "110001"
+		Case $aCharacter == "k"
+			Return "001001"
+		Case $aCharacter == "l"
+			Return "101001"
+		Case $aCharacter == "m"
+			Return "011001"
+		Case $aCharacter == "n"
+			Return "111001"
+		Case $aCharacter == "o"
+			Return "000101"
+		Case $aCharacter == "p"
+			Return "100101"
+		Case $aCharacter == "q"
+			Return "010101"
+		Case $aCharacter == "r"
+			Return "110101"
+		Case $aCharacter == "s"
+			Return "001101"
+		Case $aCharacter == "t"
+			Return "101101"
+		Case $aCharacter == "u"
+			Return "011101"
+		Case $aCharacter == "v"
+			Return "111101"
+		Case $aCharacter == "w"
+			Return "000011"
+		Case $aCharacter == "x"
+			Return "100011"
+		Case $aCharacter == "y"
+			Return "010011"
+		Case $aCharacter == "z"
+			Return "110011"
+		Case $aCharacter == "0"
+			Return "001011"
+		Case $aCharacter == "1"
+			Return "101011"
+		Case $aCharacter == "2"
+			Return "011011"
+		Case $aCharacter == "3"
+			Return "111011"
+		Case $aCharacter == "4"
+			Return "000111"
+		Case $aCharacter == "5"
+			Return "100111"
+		Case $aCharacter == "6"
+			Return "010111"
+		Case $aCharacter == "7"
+			Return "110111"
+		Case $aCharacter == "8"
+			Return "001111"
+		Case $aCharacter == "9"
+			Return "101111"
+		Case $aCharacter == "+"
+			Return "011111"
+		Case $aCharacter == "/"
+			Return "111111"
 	EndSelect
 EndFunc   ;==>Base64ToBin64
-
 #EndRegion Misc
 
 #Region Callback
@@ -4801,89 +4204,73 @@ Func SetEvent($aSkillActivate = '', $aSkillCancel = '', $aSkillComplete = '', $a
 EndFunc   ;==>SetEvent
 
 ;~ Description: Internal use for event system.
-Func Event($hWnd, $msg, $wparam, $lparam)
-	; Initial check for skill-related events to avoid unnecessary DllCalls for chat events
-	If $lparam >= 0x1 And $lparam <= 0x3 Then
-		Local $skillLogStruct = DllStructCreate("int skillID;int param1;int param2;int param3")
-		DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $wparam, 'ptr', DllStructGetPtr($skillLogStruct), 'int', 16, 'int', '')
-		HandleSkillEvent($lparam, $skillLogStruct)
-		;DllStructDelete($skillLogStruct) ; Clean up
-	ElseIf $lparam == 0x4 Then
-		Local $chatLogStruct = DllStructCreate("int messageType;char message[512]")
-		DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $wparam, 'ptr', DllStructGetPtr($chatLogStruct), 'int', 512, 'int', '')
-		ProcessChatMessage($chatLogStruct)
-		;DllStructDelete($chatLogStruct) ; Clean up
-	ElseIf $lparam == 0x5 Then
-		;Call($mLoadFinished)
-	EndIf
-EndFunc   ;==>Event
-
-Func HandleSkillEvent($eventType, $skillLogStruct)
-	Local $skillID = DllStructGetData($skillLogStruct, 1)
-	Local $param1 = DllStructGetData($skillLogStruct, 2)
-	Local $param2 = DllStructGetData($skillLogStruct, 3)
-	Local $param3 = DllStructGetData($skillLogStruct, 4) ; Only used for activation
-
-;~ Switch $eventType
-;~ 	Case 0x1
-;~ 		Call($mSkillActivate, $skillID, $param1, $param2, $param3)
-;~ 	Case 0x2
-;~ 		Call($mSkillCancel, $skillID, $param1, $param2)
-;~ 	Case 0x3
-;~ 		Call($mSkillComplete, $skillID, $param1, $param2)
-;~ EndSwitch
-EndFunc   ;==>HandleSkillEvent
-
-Func ProcessChatMessage($chatLogStruct)
-	Local $messageType = DllStructGetData($chatLogStruct, 1)
-	Local $message = DllStructGetData($chatLogStruct, "message[512]")
-	Local $channel = "Unknown"
-	Local $sender = "Unknown"
-
-	Switch $messageType
-		Case 0 ; Alliance
-			$channel = "Alliance"
-		Case 3 ; All
-			$channel = "All"
-		Case 9 ; Guild
-			$channel = "Guild"
-		Case 11 ; Team
-			$channel = "Team"
-		Case 12 ; Trade
-			$channel = "Trade"
-		Case 10 ; Sent or Global
-			If StringLeft($message, 3) == "-> " Then
-				$channel = "Sent"
-			Else
-				$channel = "Global"
-				$sender = "Guild Wars"
-			EndIf
-		Case 13 ; Advisory
-			$channel = "Advisory"
-			$sender = "Guild Wars"
-		Case 14 ; Whisper
-			$channel = "Whisper"
-		Case Else
-			$channel = "Other"
-			$sender = "Other"
+;~ modified by gigi, avoid getagentbyid, just pass agent id to callback
+Func Event($hwnd, $msg, $wparam, $lparam)
+	Switch $lparam
+		Case 0x1
+			DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $wparam, 'ptr', $mSkillLogStructPtr, 'int', 16, 'int', '')
+			Call($mSkillActivate, DllStructGetData($mSkillLogStruct, 1), DllStructGetData($mSkillLogStruct, 2), DllStructGetData($mSkillLogStruct, 3), DllStructGetData($mSkillLogStruct, 4))
+		Case 0x2
+			DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $wparam, 'ptr', $mSkillLogStructPtr, 'int', 16, 'int', '')
+			Call($mSkillCancel, DllStructGetData($mSkillLogStruct, 1), DllStructGetData($mSkillLogStruct, 2), DllStructGetData($mSkillLogStruct, 3))
+		Case 0x3
+			DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $wparam, 'ptr', $mSkillLogStructPtr, 'int', 16, 'int', '')
+			Call($mSkillComplete, DllStructGetData($mSkillLogStruct, 1), DllStructGetData($mSkillLogStruct, 2), DllStructGetData($mSkillLogStruct, 3))
+		Case 0x4
+			DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $wparam, 'ptr', $mChatLogStructPtr, 'int', 512, 'int', '')
+			Local $lMessage = DllStructGetData($mChatLogStruct, 2)
+			Local $lChannel
+			Local $lSender
+			Switch DllStructGetData($mChatLogStruct, 1)
+				Case 0
+					$lChannel = "Alliance"
+					$lSender = StringMid($lMessage, 6, StringInStr($lMessage, "</a>") - 6)
+					$lMessage = StringTrimLeft($lMessage, StringInStr($lMessage, "<quote>") + 6)
+				Case 3
+					$lChannel = "All"
+					$lSender = StringMid($lMessage, 6, StringInStr($lMessage, "</a>") - 6)
+					$lMessage = StringTrimLeft($lMessage, StringInStr($lMessage, "<quote>") + 6)
+				Case 9
+					$lChannel = "Guild"
+					$lSender = StringMid($lMessage, 6, StringInStr($lMessage, "</a>") - 6)
+					$lMessage = StringTrimLeft($lMessage, StringInStr($lMessage, "<quote>") + 6)
+				Case 11
+					$lChannel = "Team"
+					$lSender = StringMid($lMessage, 6, StringInStr($lMessage, "</a>") - 6)
+					$lMessage = StringTrimLeft($lMessage, StringInStr($lMessage, "<quote>") + 6)
+				Case 12
+					$lChannel = "Trade"
+					$lSender = StringMid($lMessage, 6, StringInStr($lMessage, "</a>") - 6)
+					$lMessage = StringTrimLeft($lMessage, StringInStr($lMessage, "<quote>") + 6)
+				Case 10
+					If StringLeft($lMessage, 3) == "-> " Then
+						$lChannel = "Sent"
+						$lSender = StringMid($lMessage, 10, StringInStr($lMessage, "</a>") - 10)
+						$lMessage = StringTrimLeft($lMessage, StringInStr($lMessage, "<quote>") + 6)
+					Else
+						$lChannel = "Global"
+						$lSender = "Guild Wars"
+					EndIf
+				Case 13
+					$lChannel = "Advisory"
+					$lSender = "Guild Wars"
+					$lMessage = StringTrimLeft($lMessage, StringInStr($lMessage, "<quote>") + 6)
+				Case 14
+					$lChannel = "Whisper"
+					$lSender = StringMid($lMessage, 7, StringInStr($lMessage, "</a>") - 7)
+					$lMessage = StringTrimLeft($lMessage, StringInStr($lMessage, "<quote>") + 6)
+				Case Else
+					$lChannel = "Other"
+					$lSender = "Other"
+			EndSwitch
+			Call($mChatReceive, $lChannel, $lSender, $lMessage)
+		Case 0x5
+			Call($mLoadFinished)
 	EndSwitch
-
-	If $channel <> "Global" And $channel <> "Advisory" And $channel <> "Other" Then
-		$sender = StringMid($message, 6, StringInStr($message, "</a>") - 6)
-		$message = StringTrimLeft($message, StringInStr($message, "<quote>") + 6)
-	EndIf
-
-	If $channel == "Sent" Then
-		$sender = StringMid($message, 10, StringInStr($message, "</a>") - 10)
-		$message = StringTrimLeft($message, StringInStr($message, "<quote>") + 6)
-	EndIf
-
-	;Call($mChatReceive, $channel, $sender, $message)
-EndFunc   ;==>ProcessChatMessage
+EndFunc   ;==>Event
 #EndRegion Callback
 
 #Region Modification
-;~ Description: Internal use only.
 Func ModifyMemory()
 	$mASMSize = 0
 	$mASMCodeOffset = 0
@@ -4925,9 +4312,9 @@ Func ModifyMemory()
 			CompleteASMCode()
 	EndSwitch
 	WriteDetour('MainStart', 'MainProc')
-	WriteDetour('TargetLogStart', 'TargetLogProc')
+;~ 	WriteDetour('TargetLogStart', 'TargetLogProc')
 	WriteDetour('TraderHookStart', 'TraderHookProc')
-	WriteDetour('LoadFinishedStart', 'LoadFinishedProc')
+;~ 	WriteDetour('LoadFinishedStart', 'LoadFinishedProc')
 	WriteDetour('RenderingMod', 'RenderingModProc')
 ;~ 	WriteDetour('StringLogStart', 'StringLogProc')
 ;~ 	WriteDetour('StringFilter1Start', 'StringFilter1Proc')
@@ -4989,6 +4376,21 @@ Func CreateMain()
 	_('mov eax,dword[ecx+40]')
 	_('test eax,eax')
 	_('jz MainMain')
+;~ 	_('mov ecx,dword[ActionBase]')
+;~ 	_('mov ecx,dword[ecx+4]')
+;~ 	_('mov ecx,dword[ecx+34]')
+;~ 	_('add ecx,6C')
+;~ 	_('push 0')
+;~ 	_('push 0')
+;~ 	_('push bb')
+;~ 	_('mov edx,esp')
+;~ 	_('push 0')
+;~ 	_('push edx')
+;~ 	_('push 18')
+;~ 	_('call ActionFunction')
+;~ 	_('pop eax')
+;~ 	_('pop ebx')
+;~ 	_('pop ecx')
 
 	_('MainMain:')
 	_('mov eax,dword[QueueCounter]')
@@ -5014,12 +4416,11 @@ Func CreateMain()
 	_('popad')
 
 	_('mov ebp,esp')
-	_('fld st(0),dword[ebp+8]')
+    _('fld st(0),dword[ebp+8]')
 
 	_('ljmp MainReturn')
 EndFunc   ;==>CreateMain
 
-;~ Description: Internal use only.
 Func CreateTargetLog()
 	_('TargetLogProc:')
 	_('cmp ecx,4')
@@ -5218,17 +4619,20 @@ EndFunc   ;==>CreateChatLog
 ;~ Description: Internal use only.
 Func CreateTraderHook()
 	_('TraderHookProc:')
-	_('push eax')
+
+    _('push eax')
 	_('mov eax,dword[ebx+28] -> 8b 43 28')
 	_('mov eax,[eax] -> 8b 00')
 	_('mov dword[TraderCostID],eax')
 	_('mov eax,dword[ebx+28] -> 8b 43 28')
 	_('mov eax,[eax+4] -> 8b 40 04')
 	_('mov dword[TraderCostValue],eax')
-	_('pop eax')
-	_('mov ebx,dword[ebp+C] -> 8B 5D 0C')
-	_('mov esi,eax')
-	_('push eax')
+    _('pop eax')
+
+	_('mov ebx,dword[ebp+C] -> 8B 5D 0C') ; Original bytes
+	_('mov esi,eax') ; Original bytes
+
+    _('push eax')
 	_('mov eax,dword[TraderQuoteID]')
 	_('inc eax')
 	_('cmp eax,200')
@@ -5236,7 +4640,8 @@ Func CreateTraderHook()
 	_('xor eax,eax')
 	_('TraderSkipReset:')
 	_('mov dword[TraderQuoteID],eax')
-	_('pop eax')
+    _('pop eax')
+
 	_('ljmp TraderHookReturn')
 EndFunc   ;==>CreateTraderHook
 
@@ -5384,15 +4789,15 @@ Func CreateRenderingMod()
 ;~ 	_('call dword[Sleep]')
 ;~ 	_('retn')
 
-	_("RenderingModProc:")
-	_("add esp,4")
-	_("cmp dword[DisableRendering],1")
-	_("ljmp RenderingModReturn")
+   _("RenderingModProc:")
+   _("add esp,4")
+   _("cmp dword[DisableRendering],1")
+   _("ljmp RenderingModReturn")
 EndFunc   ;==>CreateRenderingMod
 
 ;~ Description: Internal use only.
 Func CreateCommands()
-	_('CommandUseSkill:')
+    _('CommandUseSkill:')
 	_('mov ecx,dword[eax+C]')
 	_('push ecx')
 	_('mov ebx,dword[eax+8]')
@@ -5416,23 +4821,21 @@ Func CreateCommands()
 	_('pop eax')
 	_('ljmp CommandReturn')
 
-	_("CommandChangeTarget:")
-	_("xor edx,edx")
-	_("push edx")
-	_("mov eax,dword[eax+4]")
-	_("push eax")
-	_("call ChangeTargetFunction")
-	_("pop eax")
-	_("pop edx")
-	_("ljmp CommandReturn")
+	_('CommandChangeTarget:')
+	_('xor edx,edx')
+	_('push edx')
+	_('mov eax,dword[eax+4]')
+	_('push eax')
+	_('call ChangeTargetFunction')
+	_('pop eax')
+	_('pop edx')
+	_('ljmp CommandReturn')
 
 	_('CommandPacketSend:')
 	_('lea edx,dword[eax+8]')
 	_('push edx')
 	_('mov ebx,dword[eax+4]')
 	_('push ebx')
-	;_('push edx')
-	;_('push ebx')
 	_('mov eax,dword[PacketLocation]')
 	_('push eax')
 	_('call PacketSendFunction')
@@ -5448,17 +4851,28 @@ Func CreateCommands()
 	_('pop eax')
 	_('ljmp CommandReturn')
 
-	_("CommandWriteChat:")
-	_("push 0")    ; new from April update
-	_("add eax,4")
-	_("push eax")
-	_("call WriteChatFunction")
-	_("add esp,8")                ; was _('pop eax') before April change
-	_("ljmp CommandReturn")
+;~ 	_('CommandWriteChat:')
+;~ 	_('add eax,4')
+;~ 	_('mov edx,eax')
+;~ 	_('xor ecx,ecx')
+;~ 	_('add eax,28')
+;~ 	_('push eax')
+;~ 	_('call WriteChatFunction')
+;~ 	_('ljmp CommandReturn')
+
+	_('CommandWriteChat:')
+	_('add eax,4')
+;~ 	_('mov edx,eax')
+;~ 	_('xor ecx,ecx')
+;~ 	_('add eax,28')
+	_('push eax')
+	_('call WriteChatFunction')
+	_('pop eax')
+	_('ljmp CommandReturn')
 
 	_('CommandSellItem:')
 	_('mov esi,eax')
-	_('add esi,C')
+	_('add esi,C') ;01239A20
 	_('push 0')
 	_('push 0')
 	_('push 0')
@@ -5494,51 +4908,41 @@ Func CreateCommands()
 	_('add esp,24')
 	_('ljmp CommandReturn')
 
-	_('CommandCraftItemEx:')
+;~ 	_('CommandCraftItemEx:')
+;~ 	_('add eax,4')
+;~ 	_('push eax')
+;~ 	_('add eax,4')
+;~ 	_('push eax')
+;~ 	_('push 1')
+;~ 	_('push 0')
+;~ 	_('push 0')
+;~ 	_('push dword[eax+4]')
+;~ 	_('add eax,4')
+;~ 	_('push dword[eax+4]')
+;~ 	_('add eax,4')
+;~ 	_('mov edx,esp')
+;~ 	_('mov ecx,dword[E1D684]')
+;~ 	_('mov dword[edx-0x70],ecx')
+;~ 	_('mov ecx,dword[edx+0x1C]')
+;~ 	_('mov dword[edx+0x54],ecx')
+;~ 	_('mov ecx,dword[edx+4]')
+;~ 	_('mov dword[edx-0x14],ecx')
+;~ 	_('mov ecx,3')
+;~ 	_('mov ebx,dword[eax]')
+;~ 	_('mov edx,dword[eax+4]')
+;~ 	_('call BuyItemFunction')
+;~ 	_('ljmp CommandReturn')
+
+	_('CommandAction:')
+	_('mov ecx,dword[ActionBase]')
+	_('mov ecx,dword[ecx+�]')
+	_('add ecx,A0')
+	_('push 0')
 	_('add eax,4')
 	_('push eax')
-	_('add eax,4')
-	_('push eax')
-	_('push 1')
-	_('push 0')
-	_('push 0')
-	_('mov ecx,dword[TradeID]')
-	_('mov ecx,dword[ecx]')
-	;_('mov ebx,dword[ecx+148]')
-	_('mov edx,dword[eax+4]')
-	;_('mov ecx,dword[ecx+edx]')
-	;_('lea ecx,dword[ecx+ecx*2]')
-	_('lea ecx,dword[ebx+ecx*4]')
-	_('push ecx')
-	_('push 1')
-	_('push dword[eax+8]')
-	_('push dword[eax+C]')
-	_('call TraderFunction')
-	_('add esp,24')
-	_('mov dword[TraderCostID],0')
-	_('ljmp CommandReturn')
-
-	_("CommandAction:")
-	_("mov ecx,dword[ActionBase]")
-	_("mov ecx,dword[ecx+c]")    ; was _("mov ecx,dword[ecx+!]")
-	_("add ecx,A0")
-	_("push 0")
-	_("add eax,4")
-	_("push eax")
-	_("push dword[eax+4]")
-	_("mov edx,0")
-	_("call ActionFunction")
-	_("ljmp CommandReturn")
-
-	_('CommandUseHeroSkill:')
-	_('mov ecx,dword[eax+8]')
-	_('push ecx')
-	_('mov ecx,dword[eax+c]')
-	_('push ecx')
-	_('mov ecx,dword[eax+4]')
-	_('push ecx')
-	_('call UseHeroSkillFunction')
-	_('add esp,C')
+	_('push dword[eax+4]')
+    _('mov edx,0')
+	_('call ActionFunction')
 	_('ljmp CommandReturn')
 
 ;~ 	_('CommandToggleLanguage:')
@@ -5557,6 +4961,14 @@ Func CreateCommands()
 ;~ 	_('pop eax')
 ;~ 	_('pop ebx')
 ;~ 	_('pop ecx')
+;~ 	_('ljmp CommandReturn')
+
+;~ 	_('CommandUseHeroSkill:')
+;~ 	_('mov ecx,dword[eax+4]')
+;~ 	_('mov edx,dword[eax+c]')
+;~ 	_('mov eax,dword[eax+8]')
+;~ 	_('push eax')
+;~ 	_('call UseHeroSkillFunction')
 ;~ 	_('ljmp CommandReturn')
 
 	_('CommandSendChat:')
@@ -5591,6 +5003,7 @@ Func CreateCommands()
 	_('add esp,20')
 	_('ljmp CommandReturn')
 
+
 	_('CommandRequestQuoteSell:')
 	_('mov dword[TraderCostID],0')
 	_('mov dword[TraderCostValue],0')
@@ -5608,6 +5021,7 @@ Func CreateCommands()
 	_('add esp,20')
 	_('ljmp CommandReturn')
 
+
 	_('CommandTraderBuy:')
 	_('push 0')
 	_('push TraderCostID')
@@ -5618,12 +5032,31 @@ Func CreateCommands()
 	_('push 0')
 	_('mov edx,dword[TraderCostValue]')
 	_('push edx')
-	_('push C')
-	_('mov ecx,C')
+	_('push c')
 	_('call TraderFunction')
 	_('add esp,24')
 	_('mov dword[TraderCostID],0')
 	_('mov dword[TraderCostValue],0')
+	_('ljmp CommandReturn')
+
+	_('mov esi,eax')
+	_('add esi,10') ;01239A20
+	_('mov ecx,eax')
+	_('add ecx,4')
+	_('push ecx')
+	_('mov edx,eax')
+	_('add edx,8')
+	_('push edx')
+	_('push 1')
+	_('push 0')
+	_('push 0')
+	_('push 0')
+	_('push 0')
+	_('mov eax,dword[eax+C]')
+	_('push eax')
+	_('push 1')
+	_('call TransactionFunction')
+	_('add esp,24')
 	_('ljmp CommandReturn')
 
 	_('CommandTraderSell:')
@@ -5638,69 +5071,24 @@ Func CreateCommands()
 	_('push D')
 	_('mov ecx,d')
 	_('xor edx,edx')
-	_('call TransactionFunction')  ; 	_('call TraderFunction')
+	_('call TraderFunction')
 	_('add esp,24')
 	_('mov dword[TraderCostID],0')
 	_('mov dword[TraderCostValue],0')
 	_('ljmp CommandReturn')
 
-	_('CommandSalvage:')
-	_('push eax')
-	_('push ecx')
-	_('push ebx')
-	_('mov ebx,SalvageGlobal')
-	_('mov ecx,dword[eax+4]')
-	_('mov dword[ebx],ecx')
-	_('add ebx,4')
-	_('mov ecx,dword[eax+8]')
-	_('mov dword[ebx],ecx')
-	_('mov ebx,dword[eax+4]')
-	_('push ebx')
-	_('mov ebx,dword[eax+8]')
-	_('push ebx')
-	_('mov ebx,dword[eax+c]')
-	_('push ebx')
-	_('call SalvageFunction')
-	_('add esp,C')
-	_('pop ebx')
-	_('pop ecx')
-	_('pop eax')
-	_('ljmp CommandReturn')
-
-	_("CommandCraftItemEx2:")    ; this was added
-	_("add eax,4")
-	_("push eax")
-	_("add eax,4")
-	_("push eax")
-	_("push 1")
-	_("push 0")
-	_("push 0")
-	_("mov ecx,dword[TradeID]")
-	_("mov ecx,dword[ecx]")
-	;_("mov ebx,dword[ecx+148]")
-	_("mov edx,dword[eax+8]")
-	;_("mov ecx,dword[ecx+edx]")
-	;_("lea ecx,dword[ecx+ecx*2]")
-	_("lea ecx,dword[ebx+ecx*4]")
-	_("mov ecx,dword[ecx]")
-	_("mov [eax+8],ecx")
-	_("mov ecx,dword[TradeID]")
-	_("mov ecx,dword[ecx]")
-	_("mov ecx,dword[ecx+0xF4]")
-	_("lea ecx,dword[ecx+ecx*2]")
-	_("lea ecx,dword[ebx+ecx*4]")
-	_("mov ecx,dword[ecx]")
-	_("mov [eax+C],ecx")
-	_("mov ecx,eax")
-	_("add ecx,8")
-	_("push ecx")
-	_("push 2")
-	_("push dword[eax+4]")
-	_("push 3")
-	_("call TransactionFunction")
-	_("add esp,24")
-	_("mov dword[TraderCostID],0")
-	_("ljmp CommandReturn")
+;~ 	_('CommandSalvage:')
+;~ 	_('mov ebx,SalvageGlobal')
+;~ 	_('mov ecx,dword[eax+4]')
+;~ 	_('mov dword[ebx],ecx')
+;~ 	_('push ecx')
+;~ 	_('mov ecx,dword[eax+8]')
+;~ 	_('add ebx,4')
+;~ 	_('mov dword[ebx],ecx')
+;~ 	_('mov edx,dword[eax+c]')
+;~ 	_('mov dword[ebx],ecx')
+;~ 	_('call SalvageFunction')
+;~ 	_('ljmp CommandReturn')
 
 	_('CommandIncreaseAttribute:')
 	_('mov edx,dword[eax+4]')
@@ -5750,27 +5138,14 @@ Func CreateCommands()
 	_('repe movsb')
 	_('inc edx')
 	_('jmp AgentCopyLoopStart')
+
 	_('AgentCopyLoopExit:')
 	_('mov dword[AgentCopyCount],edx')
-	_('ljmp CommandReturn')
-
-	_('CommandSendChatPartySearch:')
-	_('lea edx,dword[eax+4]')
-	_('push edx')
-	_('mov ebx,4C')
-	_('push ebx')
-	_('mov eax,dword[PacketLocation]')
-	_('push eax')
-	_('call PacketSendFunction')
-	_('pop eax')
-	_('pop ebx')
-	_('pop edx')
 	_('ljmp CommandReturn')
 EndFunc   ;==>CreateCommands
 #EndRegion Modification
 
 #Region Online Status
-;~ Description: Change online status. 0 = Offline, 1 = Online, 2 = Do not disturb, 3 = Away
 Func SetPlayerStatus($iStatus)
 	If (($iStatus >= 0 And $iStatus <= 3) And (GetPlayerStatus() <> $iStatus)) Then
 		DllStructSetData($mChangeStatus, 2, $iStatus)
@@ -5788,27 +5163,18 @@ EndFunc   ;==>GetPlayerStatus
 #EndRegion Online Status
 
 #Region Assembler
+;~ Description: Internal use only.
 Func _($aASM)
+	;quick and dirty x86assembler unit:
+	;relative values stringregexp
+	;static values hardcoded
 	Local $lBuffer
-	Local $lOpCode
 	Select
-		Case StringInStr($aASM, ' -> ')
-			Local $split = StringSplit($aASM, ' -> ', 1)
-			$lOpCode = StringReplace($split[2], ' ', '')
+		Case StringInStr($aASM, " -> ")
+			Local $split = StringSplit($aASM, " -> ", 1)
+			$lOpCode = StringReplace($split[2], " ", "")
 			$mASMSize += 0.5 * StringLen($lOpCode)
 			$mASMString &= $lOpCode
-		Case StringLeft($aASM, 3) = 'jb '
-			$mASMSize += 2
-			$mASMString &= '72(' & StringRight($aASM, StringLen($aASM) - 3) & ')'
-		Case StringLeft($aASM, 3) = 'je '
-			$mASMSize += 2
-			$mASMString &= '74(' & StringRight($aASM, StringLen($aASM) - 3) & ')'
-		Case StringRegExp($aASM, 'cmp ebx,[a-z,A-Z]{4,}') And StringInStr($aASM, ',dword') = 0
-			$mASMSize += 6
-			$mASMString &= '81FB[' & StringRight($aASM, StringLen($aASM) - 8) & ']'
-		Case StringRegExp($aASM, 'cmp edx,[a-z,A-Z]{4,}') And StringInStr($aASM, ',dword') = 0
-			$mASMSize += 6
-			$mASMString &= '81FA[' & StringRight($aASM, StringLen($aASM) - 8) & ']'
 		Case StringRight($aASM, 1) = ':'
 			SetValue('Label_' & StringLeft($aASM, StringLen($aASM) - 1), $mASMSize)
 		Case StringInStr($aASM, '/') > 0
@@ -5883,14 +5249,14 @@ Func _($aASM)
 			$mASMSize += 7
 			$mASMString &= '8D3C15[' & StringMid($aASM, 19, StringLen($aASM) - 19) & ']'
 		Case StringRegExp($aASM, 'cmp dword[[][a-z,A-Z]{4,}[]],[-[:xdigit:]]')
-			$lBuffer = StringInStr($aASM, ',')
+			$lBuffer = StringInStr($aASM, ",")
 			$lBuffer = ASMNumber(StringMid($aASM, $lBuffer + 1), True)
 			If @extended Then
 				$mASMSize += 7
-				$mASMString &= '833D[' & StringMid($aASM, 11, StringInStr($aASM, ',') - 12) & ']' & $lBuffer
+				$mASMString &= '833D[' & StringMid($aASM, 11, StringInStr($aASM, ",") - 12) & ']' & $lBuffer
 			Else
 				$mASMSize += 10
-				$mASMString &= '813D[' & StringMid($aASM, 11, StringInStr($aASM, ',') - 12) & ']' & $lBuffer
+				$mASMString &= '813D[' & StringMid($aASM, 11, StringInStr($aASM, ",") - 12) & ']' & $lBuffer
 			EndIf
 		Case StringRegExp($aASM, 'cmp ecx,[a-z,A-Z]{4,}') And StringInStr($aASM, ',dword') = 0
 			$mASMSize += 6
@@ -5956,7 +5322,7 @@ Func _($aASM)
 			$mASMSize += 5
 			$mASMString &= 'E8{' & StringMid($aASM, 6, StringLen($aASM) - 5) & '}'
 		Case StringRegExp($aASM, 'mov dword\[[a-z,A-Z]{4,}\],[-[:xdigit:]]{1,8}\z')
-			$lBuffer = StringInStr($aASM, ',')
+			$lBuffer = StringInStr($aASM, ",")
 			$mASMSize += 10
 			$mASMString &= 'C705[' & StringMid($aASM, 11, $lBuffer - 12) & ']' & ASMNumber(StringMid($aASM, $lBuffer + 1))
 		Case StringRegExp($aASM, 'push [-[:xdigit:]]{1,8}\z')
@@ -6024,7 +5390,7 @@ Func _($aASM)
 			Else
 				$mASMSize += 6
 				$mASMString &= '81C7' & $lBuffer
-			EndIf
+			 EndIf
 		Case StringRegExp($aASM, 'add esi,[-[:xdigit:]]{1,8}\z')
 			$lBuffer = ASMNumber(StringMid($aASM, 9), True)
 			If @extended Then
@@ -6033,8 +5399,8 @@ Func _($aASM)
 			Else
 				$mASMSize += 6
 				$mASMString &= '81C6' & $lBuffer
-			EndIf
-		Case StringRegExp($aASM, 'add esp,[-[:xdigit:]]{1,8}\z')
+			 EndIf
+	    Case StringRegExp($aASM, 'add esp,[-[:xdigit:]]{1,8}\z')
 			$lBuffer = ASMNumber(StringMid($aASM, 9), True)
 			If @extended Then
 				$mASMSize += 3
@@ -6042,7 +5408,7 @@ Func _($aASM)
 			Else
 				$mASMSize += 6
 				$mASMString &= '81C4' & $lBuffer
-			EndIf
+			 EndIf
 		Case StringRegExp($aASM, 'cmp ebx,[-[:xdigit:]]{1,8}\z')
 			$lBuffer = ASMNumber(StringMid($aASM, 9), True)
 			If @extended Then
@@ -6059,8 +5425,6 @@ Func _($aASM)
 		Case Else
 			Local $lOpCode
 			Switch $aASM
-				Case 'Flag_'
-					$lOpCode = '9090903434'
 				Case 'nop'
 					$lOpCode = '90'
 				Case 'pushad'
@@ -6069,10 +5433,6 @@ Func _($aASM)
 					$lOpCode = '61'
 				Case 'mov ebx,dword[eax]'
 					$lOpCode = '8B18'
-				Case 'mov ebx,dword[ecx]'            ; added
-					$lOpCode = '8B19'                ; added
-				Case 'mov ecx,dword[ebx+ecx]'        ; added
-					$lOpCode = '8B0C0B'                ; added
 				Case 'test eax,eax'
 					$lOpCode = '85C0'
 				Case 'test ebx,ebx'
@@ -6139,12 +5499,8 @@ Func _($aASM)
 					$lOpCode = '8BEC'
 				Case 'sub esp,8'
 					$lOpCode = '83EC08'
-				Case 'sub esi,4'
-					$lOpCode = '83EE04'
 				Case 'sub esp,14'
 					$lOpCode = '83EC14'
-				Case 'sub eax,C'
-					$lOpCode = '83E80C'
 				Case 'cmp ecx,4'
 					$lOpCode = '83F904'
 				Case 'cmp ecx,32'
@@ -6167,8 +5523,6 @@ Func _($aASM)
 					$lOpCode = '8B4704'
 				Case 'mov dword[eax+4],ecx'
 					$lOpCode = '894804'
-				Case 'mov dword[eax+8],ebx'
-					$lOpCode = '895808'
 				Case 'mov dword[eax+8],ecx'
 					$lOpCode = '894808'
 				Case 'mov dword[eax+C],ecx'
@@ -6183,8 +5537,6 @@ Func _($aASM)
 					$lOpCode = '8918'
 				Case 'mov edx,dword[eax+4]'
 					$lOpCode = '8B5004'
-				Case 'mov edx,dword[eax+8]'
-					$lOpCode = '8B5008'
 				Case 'mov edx,dword[eax+c]'
 					$lOpCode = '8B500C'
 				Case 'mov edx,dword[esi+1c]'
@@ -6215,7 +5567,7 @@ Func _($aASM)
 					$lOpCode = '8B4808'
 				Case 'mov eax,dword[eax+8]'
 					$lOpCode = '8B4008'
-				Case 'mov eax,dword[eax+C]'
+			   Case 'mov eax,dword[eax+C]'
 					$lOpCode = '8B400C'
 				Case 'mov ebx,dword[eax+4]'
 					$lOpCode = '8B5804'
@@ -6225,16 +5577,8 @@ Func _($aASM)
 					$lOpCode = '8B5808'
 				Case 'mov ebx,dword[eax+C]'
 					$lOpCode = '8B580C'
-				Case 'mov ebx,dword[ecx+148]'
-					$lOpCode = '8B9948010000'
-				Case 'mov ecx,dword[ebx+13C]'
-					$lOpCode = '8B9B3C010000'
-				Case 'mov ebx,dword[ebx+F0]'
-					$lOpCode = '8B9BF0000000'
 				Case 'mov ecx,dword[eax+C]'
 					$lOpCode = '8B480C'
-				Case 'mov ecx,dword[eax+10]'
-					$lOpCode = '8B4810'
 				Case 'mov eax,dword[eax+4]'
 					$lOpCode = '8B4004'
 				Case 'push dword[eax+4]'
@@ -6331,7 +5675,7 @@ Func _($aASM)
 					$lOpCode = '81F900000501'
 				Case 'mov edi,dword[edx+4]'
 					$lOpCode = '8B7A04'
-				Case 'mov edi,dword[eax+4]'
+			    Case 'mov edi,dword[eax+4]'
 					$lOpCode = '8B7804'
 				Case $aASM = 'mov ecx,dword[E1D684]'
 					$lOpCode = '8B0D84D6E100'
@@ -6391,15 +5735,15 @@ Func _($aASM)
 					$lOpCode = '8B09'
 				Case 'mov eax,dword[ecx+40]'
 					$lOpCode = '8B4140'
-				Case 'mov ecx,dword[ecx+4]'
+			    Case 'mov ecx,dword[ecx+4]'
 					$lOpCode = '8B4904'
-					;			Case 'mov ecx,dword[ecx+Ñ]'		; Removed following April update
-					;				$lOpCode = '8B490C'			; Removed following April update
+			    Case 'mov ecx,dword[ecx+�]'
+					$lOpCode = '8B490C'
 				Case 'mov ecx,dword[ecx+8]'
 					$lOpCode = '8B4908'
-				Case 'mov ecx,dword[ecx+34]'
+			    Case 'mov ecx,dword[ecx+34]'
 					$lOpCode = '8B4934'
-				Case 'mov ecx,dword[ecx+C]'
+			    Case 'mov ecx,dword[ecx+C]'
 					$lOpCode = '8B490C'
 				Case 'mov ecx,dword[ecx+10]'
 					$lOpCode = '8B4910'
@@ -6409,20 +5753,14 @@ Func _($aASM)
 					$lOpCode = '8B4920'
 				Case 'mov ecx,dword[ecx+4c]'
 					$lOpCode = '8B494C'
-				Case 'mov ecx,dword[ecx+50]'
+			    Case 'mov ecx,dword[ecx+50]'
 					$lOpCode = '8B4950'
-				Case 'mov ecx,dword[ecx+148]'    ; this was added following April update
-					$lOpCode = '8B8948010000'    ; this was added following April update
 				Case 'mov ecx,dword[ecx+170]'
 					$lOpCode = '8B8970010000'
 				Case 'mov ecx,dword[ecx+194]'
 					$lOpCode = '8B8994010000'
 				Case 'mov ecx,dword[ecx+250]'
 					$lOpCode = '8B8950020000'
-				Case 'mov ecx,dword[ecx+134]'
-					$lOpCode = '8B8934010000'
-				Case 'mov ecx,dword[ecx+13C]'
-					$lOpCode = '8B893C010000'
 				Case 'mov al,byte[ecx+4f]'
 					$lOpCode = '8A414F'
 				Case 'mov al,byte[ecx+3f]'
@@ -6451,66 +5789,12 @@ Func _($aASM)
 					$lOpCode = '8B402C'
 				Case $aASM = 'mov eax,[eax+680]'
 					$lOpCode = '8B8080060000'
-				Case $aASM = 'fld st(0),dword[ebp+8]'
+			    Case $aASM = 'fld st(0),dword[ebp+8]'
 					$lOpCode = 'D94508'
 				Case 'mov esi,eax'
 					$lOpCode = '8BF0'
-				Case 'mov edx,dword[ecx]'
-					$lOpCode = '8B11'
-				Case 'mov dword[eax],edx'
-					$lOpCode = '8910'
-				Case 'test edx,edx'
-					$lOpCode = '85D2'
-				Case 'mov dword[eax],F'
-					$lOpCode = 'C7000F000000'
-				Case 'mov ebx,[ebx+0]'
-					$lOpCode = '8B1B'
-				Case 'mov ebx,[ebx+AC]'
-					$lOpCode = '8B9BAC000000'
-				Case 'mov ebx,[ebx+C]'
-					$lOpCode = '8B5B0C'
-				Case 'mov eax,dword[ebx+28]'
-					$lOpCode = '8B4328'
-				Case 'mov eax,[eax]'
-					$lOpCode = '8B00'
-				Case 'mov eax,[eax+4]'
-					$lOpCode = '8B4004'
-				Case 'mov ebx,dword[ebp+C]'
-					$lOpCode = '8B5D0C'
-				Case 'add ebx,ecx'
-					$lOpCode = '03D9'
-				Case 'lea ecx,dword[ecx+ecx*2]'
-					$lOpCode = '8D0C49'
-				Case 'lea ecx,dword[ebx+ecx*4]'
-					$lOpCode = '8D0C8B'
-				Case 'lea ecx,dword[ecx+18]'    ; this was added for crafting
-					$lOpCode = '8D4918'            ; this was added for crafting
-				Case 'mov ecx,dword[ecx+edx]'
-					$lOpCode = '8B0C11'
-				Case 'push dword[ebp+8]'
-					$lOpCode = 'FF7508'
-				Case 'mov dword[eax],edi'
-					$lOpCode = '8938'
-				Case 'mov [eax+8],ecx'             ; this was added for crafting
-					$lOpCode = '894808'            ; this was added for crafting
-				Case 'mov [eax+C],ecx'             ; this was added for crafting
-					$lOpCode = '89480C'            ; this was added for crafting
-				Case 'mov ebx,dword[ecx-C]'        ; this was added
-					$lOpCode = '8B59F4'            ; this was added
-				Case 'mov [eax+!],ebx'             ; this was added
-					$lOpCode = '89580C'            ; this was added
-				Case 'mov ecx,[eax+8]'             ; this was added
-					$lOpCode = '8B4808'            ; this was added
-				Case 'lea ecx,dword[ebx+18]'       ; this was added
-					$lOpCode = '8D4B18'            ; this was added
-				Case 'mov ebx,dword[ebx+18]'       ; this was added
-					$lOpCode = '8B5B18'            ; this was added
-				Case 'mov ecx,dword[ecx+0xF4]'     ; this was added for crafting
-					$lOpCode = '8B89F4000000'      ; this was added for crafting
-				Case 'cmp ah,00' ;Added by Greg76 for scan wildcards
-					$lOpCode = '80FC00'
 				Case Else
-					MsgBox(0x0, 'ASM', 'Could not assemble: ' & $aASM)
+					MsgBox(0, 'ASM', 'Could not assemble: ' & $aASM)
 					Exit
 			EndSwitch
 			$mASMSize += 0.5 * StringLen($lOpCode)
@@ -6566,6 +5850,12 @@ Func CompleteASMCode()
 EndFunc   ;==>CompleteASMCode
 
 ;~ Description: Internal use only.
+;~ Func GetLabelInfo($aLabel)
+;~ 	Local $lValue = GetValue($aLabel)
+;~ 	If $lValue = -1 Then Exit MsgBox(0, 'Label', 'Label: ' & $aLabel & ' not provided')
+;~ 	Return $lValue ;Dec(StringRight($lValue, 8))
+;~ EndFunc   ;==>GetLabelInfo
+
 Func GetLabelInfo($aLab)
 	Local Const $lVal = GetValue($aLab)
 	Return $lVal
@@ -6582,6 +5872,8 @@ Func ASMNumber($aNumber, $aSmall = False)
 		Return SetExtended(0, SwapEndian(Hex($aNumber, 8)))
 	EndIf
 EndFunc   ;==>ASMNumber
+#EndRegion Assembler
+#EndRegion Other Functions
 
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _ProcessGetName
@@ -6608,37 +5900,15 @@ Func __ProcessGetName($i_PID)
 EndFunc   ;==>__ProcessGetName
 
 Func CheckArea($aX, $aY)
-    $ret = False
-    $pX = GetAgentInfo(-2, "X")
-    $pY = GetAgentInfo(-2, "Y")
-
-    If ($pX == $aX) And ($pY == $aY) Then
-        $ret = True
-    EndIf
-    Return $ret
-EndFunc   ;==>CheckArea
-
-Func CheckAreaWRange($aX, $aY, $range)
-    $ret = False
-    $pX = GetAgentInfo(-2, "X")
-    $pY = GetAgentInfo(-2, "Y")
-
-    If ($pX < $aX + $range) And ($pX > $aX - $range) And ($pY < $aY + $range) And ($pY > $aY - $range) Then
-        $ret = True
-    EndIf
-    Return $ret
-EndFunc   ;==>CheckAreaRange
-
-Func CheckAreaRange($aX, $aY, $range)
 	$ret = False
-	$pX = GetAgentInfo(-2, "X")
-    $pY = GetAgentInfo(-2, "Y")
+	$pX = DllStructGetData(GetAgentByID(-2), "X")
+	$pY = DllStructGetData(GetAgentByID(-2), "Y")
 
-	If ($pX < $aX + $range) And ($pX > $aX - $range) And ($pY < $aY + $range) And ($pY > $aY - $range) Then
+	If ($pX < $aX + 500) And ($pX > $aX - 500) And ($pY < $aY + 500) And ($pY > $aY - 500) Then
 		$ret = True
 	EndIf
 	Return $ret
-EndFunc   ;==>CheckAreaRange
+EndFunc   ;==>CheckArea
 
 Func CountItemInBagsByModelID($ItemModelID)
 	Local Enum $BAG_Backpack = 1, $BAG_BeltPouch, $BAG_Bag1, $BAG_Bag2, $BAG_EquipmentPack, $BAG_UnclaimedItems = 7, $BAG_Storage1, $BAG_Storage2, _
@@ -6658,44 +5928,44 @@ Func Disconnected()
 	Local $lDeadlock = TimerInit()
 	Do
 		Sleep(20)
-		$lCheck = GetInstanceType() <> 2 And GetAgentExists(-2)
+		$lCheck = GetMapLoading() <> 2 And GetAgentExists(-2)
 	Until $lCheck Or TimerDiff($lDeadlock) > 5000
 	If $lCheck = False Then
-;~ 		Out("Disconnected!")
-;~ 		Out("Attempting to reconnect.")
+		Out("Disconnected!")
+		Out("Attempting to reconnect.")
 		ControlSend(GetWindowHandle(), "", "", "{Enter}")
 		$lDeadlock = TimerInit()
 		Do
 			Sleep(20)
-			$lCheck = GetInstanceType() <> 2 And GetAgentExists(-2)
+			$lCheck = GetMapLoading() <> 2 And GetAgentExists(-2)
 		Until $lCheck Or TimerDiff($lDeadlock) > 60000
 		If $lCheck = False Then
-;~ 			Out("Failed to Reconnect 1!")
-;~ 			Out("Retrying.")
+			Out("Failed to Reconnect 1!")
+			Out("Retrying.")
 			ControlSend(GetWindowHandle(), "", "", "{Enter}")
 			$lDeadlock = TimerInit()
 			Do
 				Sleep(20)
-				$lCheck = GetInstanceType() <> 2 And GetAgentExists(-2)
+				$lCheck = GetMapLoading() <> 2 And GetAgentExists(-2)
 			Until $lCheck Or TimerDiff($lDeadlock) > 60000
 			If $lCheck = False Then
-;~ 				Out("Failed to Reconnect 2!")
-;~ 				Out("Retrying.")
+				Out("Failed to Reconnect 2!")
+				Out("Retrying.")
 				ControlSend(GetWindowHandle(), "", "", "{Enter}")
 				$lDeadlock = TimerInit()
 				Do
 					Sleep(20)
-					$lCheck = GetInstanceType() <> 2 And GetAgentExists(-2)
+					$lCheck = GetMapLoading() <> 2 And GetAgentExists(-2)
 				Until $lCheck Or TimerDiff($lDeadlock) > 60000
 				If $lCheck = False Then
-;~ 					Out("Could not reconnect!")
-;~ 					Out("Exiting.")
-					EnableRendering()
+					Out("Could not reconnect!")
+					Out("Exiting.")
 					Exit 1
 				EndIf
 			EndIf
 		EndIf
 	EndIf
+	Out("Reconnected!")
 	Sleep(5000)
 EndFunc   ;==>Disconnected
 
@@ -6714,37 +5984,23 @@ Func GetPartySize()
 	Local $Party3 = MemoryRead($lheroesPtr[0], 'long') ; heroes
 
 	Local $lReturn = $Party1 + $Party2 + $Party3
-;~ 	If $lReturn > 12 or $lReturn < 1 Then $lReturn = 8
+;~    If $lReturn > 12 or $lReturn < 1 Then $lReturn = 8
 	Return $lReturn
 EndFunc   ;==>GetPartySize
-
-Func GetPartyAlliesSize()
-	Local $lOffset3[5] = [0, 0x18, 0x4C, 0x54, 0x3C]
-	Local $lalliesPtr = MemoryReadPtr($mBasePointer, $lOffset3)
-
-	Local $Party4 = MemoryRead($lalliesPtr[0], 'long') ; allies
-
-	Local $lReturn = $Party4
-	Return $lReturn
-EndFunc   ;==>GetPartyAlliesSize
-
-Func GetPartyWaitingForMission()
-	Return GetPartyState(0x8)
-EndFunc   ;==>GetPartyWaitingForMission
 
 Func GetBestTarget($aRange = 1320)
 	Local $lBestTarget, $lDistance, $lLowestSum = 100000000
 	Local $lAgentArray = GetAgentArray(0xDB)
 	For $i = 1 To $lAgentArray[0]
 		Local $lSumDistances = 0
-		If GetAgentInfo($lAgentArray[$i], 'Allegiance') <> 3 Then ContinueLoop
-		If GetAgentInfo($lAgentArray[$i], 'HP') <= 0 Then ContinueLoop
-		If GetAgentInfo($lAgentArray[$i], 'ID') = GetMyID() Then ContinueLoop
+		If DllStructGetData($lAgentArray[$i], 'Allegiance') <> 3 Then ContinueLoop
+		If DllStructGetData($lAgentArray[$i], 'HP') <= 0 Then ContinueLoop
+		If DllStructGetData($lAgentArray[$i], 'ID') = GetMyID() Then ContinueLoop
 		If GetDistance($lAgentArray[$i]) > $aRange Then ContinueLoop
 		For $j = 1 To $lAgentArray[0]
-			If GetAgentInfo($lAgentArray[$j], 'Allegiance') <> 3 Then ContinueLoop
-			If GetAgentInfo($lAgentArray[$j], 'HP') <= 0 Then ContinueLoop
-			If GetAgentInfo($lAgentArray[$j], 'ID') = GetMyID() Then ContinueLoop
+			If DllStructGetData($lAgentArray[$j], 'Allegiance') <> 3 Then ContinueLoop
+			If DllStructGetData($lAgentArray[$j], 'HP') <= 0 Then ContinueLoop
+			If DllStructGetData($lAgentArray[$j], 'ID') = GetMyID() Then ContinueLoop
 			If GetDistance($lAgentArray[$j]) > $aRange Then ContinueLoop
 			$lDistance = GetDistance($lAgentArray[$i], $lAgentArray[$j])
 			$lSumDistances += $lDistance
@@ -6757,19 +6013,34 @@ Func GetBestTarget($aRange = 1320)
 	Return $lBestTarget
 EndFunc   ;==>GetBestTarget
 
-;~ Description: Wait for map to load until every context are loaded.
-Func WaitMapLoading($aMapID = -1, $aInstanceType = -1)
-    Local $lOffset[5] = [0, 0x18, 0x2C, 0x6F0, 0xBC]
+Func WaitMapLoading($aMapID = 0, $aDeadlock = 10000)
+;~ 	Waits $aDeadlock for load to start, and $aDeadLock for agent to load after map is loaded.
+	Local $lMapLoading
+	Local $lDeadlock = TimerInit()
+
+	InitMapLoad()
 
 	Do
-		Sleep(250)
-		$lSkillbarStruct = MemoryReadPtr($mBasePointer, $lOffset, 'ptr') ; Skillbar
-	Until GetAgentPtr(-2) <> 0 And GetMaxAgents() <> 0 And $lSkillbarStruct[0] <> 0 And GetPartySize() <> 0 And ($aInstanceType = -1 Or GetInstanceType() = $aInstanceType) And ($aMapID = -1 Or GetMapID() = $aMapID)
+		Sleep(200)
+		$lMapLoading = GetMapLoading()
+		If $lMapLoading == 2 Then $lDeadlock = TimerInit()
+		If TimerDiff($lDeadlock) > $aDeadlock And $aDeadlock > 0 Then Return False
+	Until $lMapLoading <> 2 And GetMapIsLoaded() And (GetMapID() = $aMapID Or $aMapID = 0)
+
+	Sleep(getping() + 2000)
+
 	Return True
-EndFunc
+EndFunc   ;==>WaitMapLoading
 
 Func TradePlayer($aAgent)
-	Return SendPacket(0x08, $HEADER_TRADE_INITIATE, ConvertID($aAgent))
+	Local $lAgentID
+
+	If IsDllStruct($aAgent) = 0 Then
+		$lAgentID = ConvertID($aAgent)
+	Else
+		$lAgentID = DllStructGetData($aAgent, 'ID')
+	EndIf
+	SendPacket(0x08, $HEADER_TRADE_PLAYER, $lAgentID)
 EndFunc   ;==>TradePlayer
 
 Func AcceptTrade()
@@ -6788,14 +6059,14 @@ EndFunc   ;==>CancelTrade
 
 ;~ Description: Like pressing the "Change Offer" button.
 Func ChangeOffer()
-	Return SendPacket(0x4, $HEADER_TRADE_CANCEL_OFFER)
+	Return SendPacket(0x4, $HEADER_TRADE_CHANGE_OFFER)
 EndFunc   ;==>ChangeOffer
 
 ;~ $aItemID = ID of the item or item agent, $aQuantity = Quantity
 Func OfferItem($lItemID, $aQuantity = 1)
 ;~ 	Local $lItemID
 ;~ 	$lItemID = GetBagItemIDByModelID($aModelID)
-	Return SendPacket(0xC, $HEADER_TRADE_ADD_ITEM, $lItemID, $aQuantity)
+	Return SendPacket(0xC, $HEADER_TRADE_OFFER_ITEM, $lItemID, $aQuantity)
 EndFunc   ;==>OfferItem
 
 ; Return 1 Trade windows exist; Return 3 Offer; Return 7 Accepted Trade
@@ -6830,135 +6101,7 @@ Func GetLastDialogIDHex(Const ByRef $aID)
 	If $aID Then Return '0x' & StringReplace(Hex($aID, 8), StringRegExpReplace(Hex($aID, 8), '[^0].*', ''), '')
 EndFunc   ;==>GetLastDialogIDHex
 
-; Type
-Global $TypeUnit = 0xDB ; Player/Pet/Enemy/NPC (alive units)
-Global $TypeObject = 0x200 ; Signpost/HiddenStash (stationary object)
-Global $TypeLooteable = 0x400 ; Looteable object
-; Allegiance
-Global $NoneUnitType = 0 ; should not be produced by game, and object + looteable doesn't have allegiance
-Global $UnitTypePlayer = 1 ; 1 = Player(s)
-Global $UnitTypePet = 2 ; 2 = Charmable Pets
-Global $UnitTypeEnemy = 3 ; 3 = Enemies
-Global $UnitTypePlayerPet = 4 ; 4 = Player(s) Pets
-Global $UnitTypeUnknown = 5    ; 5 = ?
-Global $UnitTypeNPC = 6 ; 6 = NPC(s)
-; Distance
-Global $DistanceCasting = 1250
-Global $DistanceSpirit = 2500
-Global $DistanceCompass = 5000
-
-#Region "Agent Detection and Distance Functions"
-Func GetCountInRangeOfAgent($aAgent = -2, $aRange = $DistanceCasting, $aAllegiance = $UnitTypeEnemy, $aType = $TypeUnit)
-	Local $lAgent, $lDistance
-	Local $lCount = 0
-
-	For $i = 1 To GetMaxAgents()
-		$lAgent = GetAgentPtr($i)
-
-		If GetAgentInfo($lAgent, 'Type') <> $aType Then ContinueLoop
-		If $aType == $TypeUnit Then
-			If GetAgentInfo($lAgent, 'Allegiance') <> $aAllegiance Then ContinueLoop
-			If GetAgentInfo($lAgent, 'HP') <= 0 Then ContinueLoop
-			If BitAND(GetAgentInfo($lAgent, 'Effects'), 0x0010) > 0 Then ContinueLoop
-		ElseIf $aType == $TypeObject Then
-
-		ElseIf $aType == $TypeLooteable Then
-
-		EndIf
-
-		$lDistance = GetDistance($lAgent, $aAgent)
-
-		If $lDistance > $aRange Then ContinueLoop
-		$lCount += 1
-	Next
-	Return $lCount
-EndFunc   ;==>GetCountInRangeOfAgent
-
-Func GetClosestInRangeOfAgent($aAgent = -2, $aRange = $DistanceCasting, $aAllegiance = $UnitTypeEnemy, $aType = $TypeUnit)
-	Local $lAgent, $lDistance
-	Local $lClosestAgent = 0
-	Local $lMinDistance = 100000000 ; Arbitrarily large number to ensure any real distance is smaller.
-
-	For $i = 1 To GetMaxAgents()
-		$lAgent = GetAgentPtr($i)
-
-		If GetAgentInfo($lAgent, 'Type') <> $aType Then ContinueLoop
-		If $aType == $TypeUnit Then
-			If GetAgentInfo($lAgent, 'Allegiance') <> $aAllegiance Then ContinueLoop
-			If GetAgentInfo($lAgent, 'HP') <= 0 Then ContinueLoop
-			If BitAND(GetAgentInfo($lAgent, 'Effects'), 0x0010) > 0 Then ContinueLoop
-		ElseIf $aType == $TypeObject Then
-			; Include additional conditions specific to TypeObject if necessary
-		ElseIf $aType == $TypeLooteable Then
-			; Include additional conditions specific to TypeLooteable if necessary
-		EndIf
-
-		$lDistance = GetDistance($lAgent, $aAgent)
-		If $lDistance <= $aRange And $lDistance < $lMinDistance Then
-			$lMinDistance = $lDistance
-			$lClosestAgent = $lAgent
-		EndIf
-	Next
-
-	Return $lClosestAgent
-EndFunc   ;==>GetClosestInRangeOfAgent
-
-;Used for smaller range distance of enemy Detection
-Func GetClosestInRangeOfAgent2($aAgent = -2, $aRange = $DistanceCasting, $aAllegiance = $UnitTypeEnemy, $aType = $TypeUnit)
-	Local $lAgent, $lDistance
-	Local $lClosestAgent = 0
-	Local $lMinDistance = 1000 ; Arbitrarily large number to ensure any real distance is smaller.
-
-
-	For $i = 1 To GetMaxAgents()
-		$lAgent = GetAgentPtr($i)
-
-		If GetAgentInfo($lAgent, 'Type') <> $aType Then ContinueLoop
-		If $aType == $TypeUnit Then
-			If GetAgentInfo($lAgent, 'Allegiance') <> $aAllegiance Then ContinueLoop
-			If GetAgentInfo($lAgent, 'HP') <= 0 Then ContinueLoop
-			If BitAND(GetAgentInfo($lAgent, 'Effects'), 0x0010) > 0 Then ContinueLoop
-		ElseIf $aType == $TypeObject Then
-			; Include additional conditions specific to TypeObject if necessary
-		ElseIf $aType == $TypeLooteable Then
-			; Include additional conditions specific to TypeLooteable if necessary
-		EndIf
-
-		$lDistance = GetDistance($lAgent, $aAgent)
-		If $lDistance <= $aRange And $lDistance < $lMinDistance Then
-			$lMinDistance = $lDistance
-			$lClosestAgent = $lAgent
-		EndIf
-	Next
-
-	Return $lClosestAgent
-EndFunc   ;==>GetClosestInRangeOfAgent2
-
-Func GetNumberOfFoesInRangeOfAgent2($aAgent = -2, $aRange = 1250)
-	Local $lAgent, $lDistance
-	Local $lCount = 0
-
-
-	For $i = 1 To GetMaxAgents()
-		$lAgent = GetAgentPtr($i)
-		If BitAND(GetAgentInfo($lAgent, 'typemap'), 262144) Then ContinueLoop
-		If GetAgentInfo($lAgent, 'Type') <> 0xDB Then ContinueLoop
-		If GetAgentInfo($lAgent, 'Allegiance') <> 3 Then ContinueLoop
-
-		If GetAgentInfo($lAgent, 'HP') <= 0 Then ContinueLoop
-		If BitAND(GetAgentInfo($lAgent, 'Effects'), 0x0010) > 0 Then ContinueLoop
-		$lDistance = GetDistance($lAgent, $aAgent)
-
-		If $lDistance > $aRange Then ContinueLoop
-		$lCount += 1
-	Next
-	Return $lCount
-EndFunc   ;==>GetNumberOfFoesInRangeOfAgent2
-
-#EndRegion "Agent Detection and Distance Functions"
-
-#Region "Item Management"
-; Function to return array with itemIDs of Items in Bags with correct ModelID.
+;~ Description: Returns array with itemIDs of Items in Bags with correct ModelID.
 Func GetBagItemIDByModelID($aModelID)
 	Local $lRetArr[291][3]
 	Local $lCount = 0
@@ -6999,6 +6142,7 @@ Func GetItemPtrBySlot($aBag, $aSlot)
 	Return MemoryRead($lItemArrayPtr + 4 * ($aSlot - 1), 'ptr')
 EndFunc   ;==>GetItemPtrBySlot
 
+;~ Description: Returns amount of slots of bag.
 Func GetMaxSlots($aBag)
 	If IsPtr($aBag) Then
 		Return MemoryRead($aBag + 32, 'long')
@@ -7006,141 +6150,4 @@ Func GetMaxSlots($aBag)
 		Return MemoryRead(GetBagPtr($aBag) + 32, 'long')
 	EndIf
 EndFunc   ;==>GetMaxSlots
-#EndRegion "Item Management"
 
-#Region "Town and Party Management"
-; Function to check if the player is in town.
-Func CheckInTown($aTown = "null")
-	Local $mapID = GetMapID()
-	If ($aTown <> "null" And IsNumber($aTown)) Then
-		If $aTown == $mapID Then
-			Return True
-		EndIf
-	EndIf
-
-	If (($mapID = 148) Or ($mapID = 163) Or ($mapID = 164) Or ($mapID = 165) Or ($mapID = 166)) Then
-		Return True
-	Else
-		Return False
-	EndIf
-EndFunc   ;==>CheckInTown
-
-; Function to handle resignation and returning to outpost.
-Func ResignAndReturn()
-	If (CheckInTown() == True) Then
-		Sleep(500)
-	Else
-		Resign()
-		Local $lTimeout = GetPing() + 10000, $lDeadlock = TimerInit()
-		Do
-			If GetPartyDefeated() Then
-				Sleep(1000)
-				Return ReturnToOutpost()
-			EndIf
-			Sleep(250)
-		Until TimerDiff($lDeadlock) > $lTimeout
-	EndIf
-EndFunc   ;==>ResignAndReturn
-
-Func GetPartyDefeated()
-	Return GetPartyState(0x20)
-EndFunc   ;==>GetPartyDefeated
-
-Func GetPartyState($aFlag)
-	Local $lOffset[4] = [0, 0x18, 0x4C, 0x14]
-	Local $lBitMask = MemoryReadPtr($mBasePointer, $lOffset)
-	Return BitAND($lBitMask[1], $aFlag) > 0
-EndFunc   ;==>GetPartyState
-#EndRegion "Town and Party Management"
-
-#Region "Miscellaneous Functions"
-; Function to use a specific item by ID.
-Func UseStone()
-	Local $IgneousID = 30847
-	For $bag = 1 To 4
-		For $slot = 1 To DllStructGetData(GetBag($bag), 'Slots')
-			Global $item = GetItemBySlot($bag, $slot)
-			If DllStructGetData($item, 'ModelID') == $IgneousID Then
-				UseItem($item)
-				RndSleep(500)
-				Return
-			EndIf
-		Next
-	Next
-EndFunc   ;==>UseStone
-
-; Function to check if the player has a specific effect.
-Func HasEffect($aEffectSkillID)
-	If DllStructGetData(GetEffect($aEffectSkillID), "SkillID") == 0 Then
-		Return False
-	Else
-		Return True
-	EndIf
-EndFunc   ;==>HasEffect
-
-Func GetIsExplorableArea()
-	Return GetInstanceType() == 1
-EndFunc   ;==>GetIsExplorableArea
-
-Func _PurgeHook()
-	; Code for toggling rendering or performing a hook purge.
-	Sleep(Random(4000, 5000))
-EndFunc   ;==>_PurgeHook
-#EndRegion "Miscellaneous Functions"
-
-#Region "Structures Definition"
-; Define TitleInfo structure.
-Func TitleInfo($title_id, $unk_flags, $value, $h000c, $current_rank_minimum_value, $h0014, $next_rank_minimum_value, $num_ranks, $h0020, $progress_display_enc_string, $mouseover_hint_enc_string)
-	Local $struct = DllStructCreate("uint32 title_id;uint32 unk_flags;uint32 value;uint32 h000c;uint32 current_rank_minimum_value;uint32 h0014;uint32 next_rank_minimum_value;uint32 num_ranks;uint32 h0020;wchar[16] progress_display_enc_string;wchar[16] mouseover_hint_enc_string")
-	DllStructSetData($struct, "title_id", $title_id)
-	DllStructSetData($struct, "unk_flags", $unk_flags)
-	DllStructSetData($struct, "value", $value)
-	DllStructSetData($struct, "h000c", $h000c)
-	DllStructSetData($struct, "current_rank_minimum_value", $current_rank_minimum_value)
-	DllStructSetData($struct, "h0014", $h0014)
-	DllStructSetData($struct, "next_rank_minimum_value", $next_rank_minimum_value)
-	DllStructSetData($struct, "num_ranks", $num_ranks)
-	DllStructSetData($struct, "h0020", $h0020)
-	DllStructSetData($struct, "progress_display_enc_string", $progress_display_enc_string, 1)
-	DllStructSetData($struct, "mouseover_hint_enc_string", $mouseover_hint_enc_string, 1)
-	Return $struct
-EndFunc   ;==>TitleInfo
-
-; Define PlayerAttrUpdate structure.
-Func PlayerAttrUpdate($attr_id, $modifier)
-	Local $struct = DllStructCreate("uint32 attr_id;int32 modifier")
-	DllStructSetData($struct, "attr_id", $attr_id)
-	DllStructSetData($struct, "modifier", $modifier)
-	Return $struct
-EndFunc   ;==>PlayerAttrUpdate
-
-; Define PlayerAttrSet structure.
-Func PlayerAttrSet($experience, $kurzick_faction, $kurzick_faction_total, $luxon_faction, $luxon_faction_total, $imperial_faction, $imperial_faction_total, $hero_skill_points, $hero_skill_points_total, $level, $morale_percent, $balthazar_faction, $balthazar_faction_total, $skill_points, $skill_points_total)
-	Local $struct = DllStructCreate("uint32 experience;uint32 kurzick_faction;uint32 kurzick_faction_total;uint32 luxon_faction;uint32 luxon_faction_total;uint32 imperial_faction;uint32 imperial_faction_total;uint32 hero_skill_points;uint32 hero_skill_points_total;uint32 level;uint32 morale_percent;uint32 balthazar_faction;uint32 balthazar_faction_total;uint32 skill_points;uint32 skill_points_total")
-	DllStructSetData($struct, "experience", $experience)
-	DllStructSetData($struct, "kurzick_faction", $kurzick_faction)
-	DllStructSetData($struct, "kurzick_faction_total", $kurzick_faction_total)
-	DllStructSetData($struct, "luxon_faction", $luxon_faction)
-	DllStructSetData($struct, "luxon_faction_total", $luxon_faction_total)
-	DllStructSetData($struct, "imperial_faction", $imperial_faction)
-	DllStructSetData($struct, "imperial_faction_total", $imperial_faction_total)
-	DllStructSetData($struct, "hero_skill_points", $hero_skill_points)
-	DllStructSetData($struct, "hero_skill_points_total", $hero_skill_points_total)
-	DllStructSetData($struct, "level", $level)
-	DllStructSetData($struct, "morale_percent", $morale_percent)
-	DllStructSetData($struct, "balthazar_faction", $balthazar_faction)
-	DllStructSetData($struct, "balthazar_faction_total", $balthazar_faction_total)
-	DllStructSetData($struct, "skill_points", $skill_points)
-	DllStructSetData($struct, "skill_points_total", $skill_points_total)
-	Return $struct
-EndFunc   ;==>PlayerAttrSet
-#EndRegion "Structures Definition"
-
-;~ Description: Returns World struct. (from 0 to 8)
-Func GetWorldInfoByID($aWorldID)
-    Local $lWorldStructAddress = $mWorldConst + (0x30 * $aWorldID)
-
-    DllCall($mKernelHandle, 'int', 'ReadProcessMemory', 'int', $mGWProcHandle, 'int', $lWorldStructAddress, 'ptr', DllStructGetPtr($g_WorldStruct), 'int', DllStructGetSize($g_WorldStruct), 'int', '')
-
-    Return $g_WorldStruct
-EndFunc   ;==>GetWorldInfoByID
