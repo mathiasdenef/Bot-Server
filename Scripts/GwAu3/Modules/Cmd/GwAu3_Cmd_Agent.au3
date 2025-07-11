@@ -42,7 +42,7 @@ Func Agent_TargetNearestEnemy($a_f_MaxDistance = 1300)
         If $l_p_Pointer = 0 Then ContinueLoop
 
         ; Check if agent is alive
-        If Not Agent_GetAgentInfo($l_p_Pointer, "HP") <= 0 Then ContinueLoop
+        If Not Agent_GetAgentInfo($i, "HP") > 0 Then ContinueLoop
 
         ; Check if agent is an enemy (simplified check)
         Local $l_i_Allegiance = Agent_GetAgentInfo($i, "Allegiance")
@@ -81,7 +81,7 @@ Func Agent_TargetNearestAlly($a_f_MaxDistance = 1300, $a_b_ExcludeSelf = True)
         If $l_p_Pointer = 0 Then ContinueLoop
 
         ; Check if agent is alive
-        If Not Agent_GetAgentInfo($l_p_Pointer, "HP") <= 0 Then ContinueLoop
+        If Not Agent_GetAgentInfo($l_i_Index, "HP") > 0 Then ContinueLoop
 
         ; Check if agent is an ally (simplified check)
         Local $l_i_Allegiance = Agent_GetAgentInfo($l_i_Index, "Allegiance")

@@ -12,7 +12,7 @@
 
 Opt("GUIOnEventMode", 1)
 #Region ### START Koda GUI section ### Form=
-$Form = GUICreate("Keiran Runner", 502, 782, -1, -1)
+$Form = GUICreate("Keiran Runner", 503, 783, -1, -1)
 $LogBox = GUICtrlCreateEdit("", 30, 617, 430, 142, BitOR($GUI_SS_DEFAULT_EDIT,$ES_READONLY))
 GUICtrlSetData(-1, "")
 $ButtonStart = GUICtrlCreateButton("Start", 30, 576, 430, 30)
@@ -39,12 +39,12 @@ $Label1 = GUICtrlCreateLabel("Succes Runs:", 274, 390, 76, 17)
 $Label2 = GUICtrlCreateLabel("Fail Runs:", 274, 422, 51, 17)
 $Label3 = GUICtrlCreateLabel("War Supplies:", 274, 454, 70, 17)
 $Label4 = GUICtrlCreateLabel("Ectos:", 274, 486, 63, 17)
-$LabelSuccesRuns = GUICtrlCreateLabel("-", 354, 390, 50, 17)
-$LabelFailRuns = GUICtrlCreateLabel("-", 354, 422, 50, 17)
-$LabelWarSupplies = GUICtrlCreateLabel("-", 354, 454, 50, 17)
-$LabelEctos = GUICtrlCreateLabel("-", 354, 486, 50, 17)
+$LabelSuccesRuns = GUICtrlCreateLabel("-", 354, 390, 80, 17)
+$LabelFailRuns = GUICtrlCreateLabel("-", 354, 422, 80, 17)
+$LabelWarSupplies = GUICtrlCreateLabel("-", 354, 454, 80, 17)
+$LabelEctos = GUICtrlCreateLabel("-", 346, 486, 80, 17)
 $Label9 = GUICtrlCreateLabel("Gold:", 274, 518, 63, 17)
-$LabelGold = GUICtrlCreateLabel("-", 354, 518, 50, 17)
+$LabelGold = GUICtrlCreateLabel("-", 354, 518, 80, 17)
 GUICtrlCreateGroup("", -99, -99, 1, 1)
 $GroupStatus = GUICtrlCreateGroup("Bot Status", 30, 20, 200, 60)
 $LabelStatusTitle = GUICtrlCreateLabel("Status:", 45, 44, 45, 17)
@@ -123,7 +123,10 @@ Func EventHandler()
 			clearmemory()
 			togglerendering()
 		Case $ButtonDebug1
-			Out(Map_GetInstanceInfo("IsLoading"))
+			Out(Agent_GetAgentInfo(-2, "HP") > 0)
+			Out(IsAlive())
+			Out(Agent_GetAgentInfo(-2, "CurrentHP"))
+			Out(Agent_GetAgentInfo(-2, "MaxHP"))
 		Case $ButtonDebug2
 			SetBotState($STATE_DISCONNECTED)
 		Case $gui_event_close
@@ -205,12 +208,12 @@ EndFunc
 Func Step_EnterQuest()
 	Out("--Executing step: EnterQuest--")
 	UpdateStatsUI()
-	Map_WaitMapLoading()
-	Sleep(2000)
-	If Not IsAlive() Then
+	WaitMapLoading()
+	Other_PingSleep(3000)
+	If Not IsAlive() And Agent_GetAgentInfo(-2, "MaxHP") <> 0 Then ;Apparently HP is 0 when returning to outpost after resign, so maxHP checking aswell, its 0 if "still loading"
 		Out("Step_EnterQuest(): Player is dead")
 		Map_ReturnToOutpost()
-		Map_WaitMapLoading()
+		WaitMapLoading()
 		Other_PingSleep(3000)
 		Return False
 	EndIf
@@ -227,7 +230,7 @@ Func Step_RunQuest()
 	Local $bSuccess = True
 
 	Out("--Executing step: RunQuest--")
-	Map_WaitMapLoading()
+	WaitMapLoading()
 	Sleep(2000)
 	If Map_GetMapID() <> $questMapId Then
 		Out("Trying to start quest in wrong map")
@@ -261,7 +264,7 @@ Func Step_ResetQuest()
 		Chat_SendChat("resign", '/')
 		Other_PingSleep(2500)
 		Map_ReturnToOutpost()
-		Map_WaitMapLoading()
+		WaitMapLoading()
 		Other_PingSleep(3000)
 	Until Map_GetMapID() = $homMapId or Map_GetMapID() = $eotnOutpostMapId or TimerDiff($antiBugTimer) > 30000
 	If TimerDiff($antiBugTimer) > 30000 Then
@@ -280,7 +283,7 @@ EndFunc
 Func Step_HardReset()
 	Out("--Executing step: HardReset--")
 	Map_TravelTo($eotnOutpostMapId)
-	Map_WaitMapLoading()
+	WaitMapLoading()
 	Other_PingSleep(2000)
 	If Map_GetMapID() <> $eotnOutpostMapId Then
 		Out("HardReset failed: Not in EotN outpost after reset.")
@@ -301,7 +304,7 @@ Func Step_BuyEctos()
 	If Map_GetMapID() <> 178 Then
 		Out("Traveling to Guild Hall...")
 		Map_TravelGH()
-		Map_WaitMapLoading()
+		WaitMapLoading()
 		Other_PingSleep(2000)
 	EndIf
 	If Not BuyEctosFromTrader() Then
@@ -326,7 +329,7 @@ Func EnsureAtHom()
 		If Map_GetMapID() <> $eotnOutpostMapId AND Map_GetMapID() <> $homMapId Then
 			Out("Traveling To EotN")
 			Map_TravelTo($eotnOutpostMapId)
-			Map_WaitMapLoading()
+			WaitMapLoading()
 			Other_PingSleep(2000)
 		EndIf
 		If Map_GetMapID() = $eotnOutpostMapId Then
@@ -394,7 +397,7 @@ Func EnterHom()
 		MoveTo(-3477, 4245, False, 40)
 		MoveTo(-4060, 4675, False, 50)
 		MoveTo(-4779, 5209, False, 0)
-		Map_WaitMapLoading()
+		WaitMapLoading()
 		Other_PingSleep(2000)
 	Until Map_GetMapID() = $homMapId Or TimerDiff($bugTimer) > 30000
 
@@ -414,7 +417,7 @@ Func WaitForAutoReturnToHom()
 		Sleep(100)
 	Until Map_GetMapID() = $homMapId Or Not IsAlive() Or TimerDiff($tResetWait) > 30000
 
-	Map_WaitMapLoading()
+	WaitMapLoading()
 	Other_PingSleep(2000) ; Give some time for the map to load
 
 	If Map_GetMapID() = $homMapId Then
@@ -486,12 +489,17 @@ Func RunWaypoints()
 EndFunc
 
 Func MoveAndSurvive($x, $y, $s = "")
+	Local $tDisconnected = TimerInit()
 	Local $iblocked = 0
 
 	If $s <> "" Then out($s)
 	Map_Move($x, $y, 50)
 	Item_SwitchWeaponSet(0)
 	Do
+		If CheckForDisconnect($tDisconnected) Then
+			SetBotState($STATE_DISCONNECTED)
+			Return False
+		EndIf
 		Survive()
 		Sleep(50)
 		If Agent_GetAgentInfo(-2, "MoveX") = 0 And Agent_GetAgentInfo(-2, "MoveY") = 0 And Not Agent_GetAgentInfo(-2, "IsKnockedDown") And Not Agent_GetAgentInfo(-2, "IsCasting") Then
@@ -613,10 +621,16 @@ Func GetTarget($aEnemiesInRange)
 EndFunc
 
 Func Fight($arange)
+	Local $tDisconnected = TimerInit()
 	Out("Fighting...")
 	Local $ndeadlock = TimerInit()
 
 	Do
+		If CheckForDisconnect($tDisconnected) Then
+			SetBotState($STATE_DISCONNECTED)
+			Return False
+		EndIf
+
 		If Agent_GetAgentInfo(-2, "HP") <= 0 Then
 			Out("Fight() aborted: player is dead.")
 			Return False
@@ -703,11 +717,17 @@ Func Cast($target)
 EndFunc
 
 Func WaitAndFight($adist, $iideadlock)
+	Local $tDisconnected = TimerInit()
 	Local $target, $ldistance
 	Local $tStart = TimerInit()
 	Out("WaitAndFight(): Waiting for enemies...")
 
 	Do
+		If CheckForDisconnect($tDisconnected) Then
+			SetBotState($STATE_DISCONNECTED)
+			Return False
+		EndIf
+
 		$target = Agent_TargetNearestEnemy()
 		$ldistance = Agent_GetDistance($target, -2)
 
@@ -885,6 +905,7 @@ Func OutAllAgentProperties($agentPtr)
 EndFunc
 
 Func MoveToNPC($target, $block = True)
+	Local $tDisconnected = TimerInit()
 	Local $lMapLoading = Map_GetInstanceInfo("IsLoading"), $lMapLoadingOld
 	Local $lBlocked = 0
 
@@ -892,6 +913,12 @@ Func MoveToNPC($target, $block = True)
 
 	Do
 		Sleep(100)
+
+		If CheckForDisconnect($tDisconnected) Then
+			SetBotState($STATE_DISCONNECTED)
+			Return False
+		EndIf
+
 		If Agent_GetAgentInfo(-2, "HP") <= 0 Then
 			Out("MoveToNPC() aborted: player is dead.")
 			Agent_CancelAction()
@@ -929,6 +956,7 @@ Func MoveToNPC($target, $block = True)
 EndFunc
 
 Func MoveTo($x, $y, $antiBlock = True, $range = 150, $random = 50)
+	Local $tDisconnected = TimerInit()
 	Local $lBlocked = 0
 	Local $lMapLoading = Map_GetInstanceInfo("IsLoading"), $lMapLoadingOld
 
@@ -939,6 +967,11 @@ Func MoveTo($x, $y, $antiBlock = True, $range = 150, $random = 50)
 
 	Do
 		Sleep(100)
+
+		If CheckForDisconnect($tDisconnected) Then
+			SetBotState($STATE_DISCONNECTED)
+			Return False
+		EndIf
 
 		Local $myX = Agent_GetAgentInfo(-2, "X")
 		Local $myY = Agent_GetAgentInfo(-2, "Y")
@@ -1049,7 +1082,7 @@ Func TryToReconnect()
 		Local $tStart = TimerInit()
 		Do
 			Sleep(200)
-			$reconnected = Map_GetInstanceInfo("IsLoading") And Agent_GetAgentPtr(-2) <> 0
+			$reconnected = Map_GetInstanceInfo("IsLoading") = False And Agent_GetAgentPtr(-2) <> 0
 		Until $reconnected Or TimerDiff($tStart) > 60000
 
 		If Not $reconnected Then
@@ -1066,4 +1099,40 @@ Func TryToReconnect()
 		Out("All reconnect attempts failed. Exiting bot.")
 		$BotState = $STATE_ERROR
 	EndIf
+EndFunc
+
+Func CheckForDisconnect(ByRef $tRef, $timeout = 30000)
+	If Map_GetInstanceInfo("IsLoading") And Agent_GetAgentPtr(-2) = 0 Then
+		If TimerDiff($tRef) > $timeout Then
+			SetBotState($STATE_DISCONNECTED)
+			Return True
+		EndIf
+	Else
+		$tRef = TimerInit()
+	EndIf
+	Return False
+EndFunc
+
+Func WaitMapLoading($a_i_MapID = -1, $a_i_InstanceType = -1, $iTimeoutMs = 10000)
+	Local $tStart = TimerInit()
+
+	Do
+		Sleep(250)
+
+		If Game_GetGameInfo("IsCinematic") Then
+			Cinematic_SkipCinematic()
+			Sleep(1000)
+		EndIf
+
+		If TimerDiff($tStart) > $iTimeoutMs Then
+			SetBotState($STATE_DISCONNECTED)
+			Return False
+		EndIf
+
+	Until Agent_GetAgentPtr(-2) <> 0 And Agent_GetMaxAgents() <> 0 And World_GetWorldInfo("SkillbarArray") <> 0 And Party_GetPartyContextPtr() <> 0 _
+		And ($a_i_InstanceType = -1 Or Map_GetInstanceInfo("Type") = $a_i_InstanceType) _
+		And ($a_i_MapID = -1 Or Map_GetCharacterInfo("MapID") = $a_i_MapID) _
+		And Not Game_GetGameInfo("IsCinematic")
+
+	Return True
 EndFunc
