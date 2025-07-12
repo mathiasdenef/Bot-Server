@@ -12,12 +12,16 @@ public class BotClient
     public string Password { get; set; }
     public string CharacterName { get; set; }
     public string GameClientPath { get; set; }
+    public BotClientView? View { get; set; }
 
     public TcpClient? TcpConnection { get; set; }
 
-    public NetworkStream? Stream => TcpConnection?.Connected == true ? TcpConnection.GetStream() : null;
+    public bool IsConnected => TcpConnection != null && TcpConnection.Connected;
+    public NetworkStream? Stream => TcpConnection != null ? TcpConnection.GetStream() : null;
 
-    public bool IsConnected => TcpConnection?.Connected ?? false;
+    public DateTime LastPongTime { get; set; } = DateTime.Now;
+    public bool IsAlive => (DateTime.Now - LastPongTime).TotalSeconds < 10;
+
 
     public BotClient(string email, string password, string characterName, string gameClientPath)
     {
@@ -48,15 +52,24 @@ public class BotClient
 
     public void SendMessage(string message)
     {
-        if (!IsConnected || Stream == null) return;
+        if (!IsConnected || Stream == null)
+        {
+            //Console.WriteLine("[SendMessage] Not connected – aborting send.");
+            return;
+        }
 
         byte[] buffer = Encoding.UTF8.GetBytes(message + "\n");
+
         try
         {
             Stream.Write(buffer, 0, buffer.Length);
+            Stream.Flush(); // <- niet verplicht, maar kan helpen voor veiligheid
+
+            //Console.WriteLine($"[SendMessage] Sent to client: \"{message}\"");
         }
-        catch
+        catch (Exception ex)
         {
+            Console.WriteLine($"[SendMessage] ERROR: {ex.Message}");
             CloseConnection();
         }
     }

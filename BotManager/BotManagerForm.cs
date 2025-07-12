@@ -26,9 +26,10 @@ namespace BotManager
         private BindingSource bindingSource1 = new BindingSource();
         public BindingList<ClientViewModel> clientViewModelBindingList;
 
-        private BindingList<BotClient> _clients = [];
-        private BindingList<BotClientView> _clientViews = [];
+        public BindingList<BotClient> clients = [];
+        private BindingList<BotClientView> _runningClientsViews = [];
         private TcpBotServer _server;
+        public PingManager pingManager;
 
         public BotManagerForm()
         {
@@ -40,18 +41,48 @@ namespace BotManager
         private async void BotManagerForm_Load(object sender, EventArgs e)
         {
             ConfigureBotGrid();
-            GenerateTestClients();
             LoadBotClients();
             _server = new TcpBotServer(this);
-            await _server.StartAsync(5000);
-            
+        }
+        protected override async void OnShown(EventArgs e)
+        {
+            base.OnShown(e);
+
+            try
+            {
+                pingManager = new PingManager(_runningClientsViews);
+                await _server.StartAsync(5055);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Server start faalde: " + ex.Message);
+            }
         }
 
         private void selectAllBotClientsButton_Click(object sender, EventArgs e)
         {
-            for (int i = 0; i < botClientCheckList.Items.Count; i++)
+            //for (int i = 0; i < botClientCheckList.Items.Count; i++)
+            //{
+            //    botClientCheckList.SetItemChecked(i, true);
+            //}
+            foreach (var view in _runningClientsViews)
             {
-                botClientCheckList.SetItemChecked(i, true);
+                if (view.Source != null && view.Source.TcpConnection != null)
+                {
+                    try
+                    {
+                        view.Source.SendMessage("PING");
+                        AppendLog($"[DEBUG] PING sent to {view.CharacterName}");
+                    }
+                    catch (Exception ex)
+                    {
+                        AppendLog($"[DEBUG] PING FAIL {view.CharacterName}: {ex.Message}");
+                    }
+                }
+                else
+                {
+                    AppendLog($"[DEBUG] {view.CharacterName} not connected, ping skipped.");
+                }
             }
         }
 
@@ -62,63 +93,68 @@ namespace BotManager
             startSelectBotClientsButton.Enabled = checkedCount > 0;
         }
 
-        private void GenerateTestClients()
-        {
-            var random = new Random();
-            _clientViews = new BindingList<BotClientView>();
-
-            string[] states = { "Idle", "Running", "Disconnected", "Error" };
-
-            for (int i = 1; i <= 10; i++)
-            {
-                _clientViews.Add(new BotClientView
-                {
-                    IsSelected = false,
-                    CharacterName = $"Bot_{i}",
-                    State = states[random.Next(states.Length)],
-                    Connected = random.Next(2) == 1,
-                    Source = null // kan vervangen worden door een dummy BotClient als je wil
-                });
-            }
-
-            botClientGrid.DataSource = _clientViews;
-        }
-
         private void ConfigureBotGrid()
         {
-            botClientGrid.DataSource = _clientViews;
-            botClientGrid.AutoGenerateColumns = true;
-            botClientGrid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-            botClientGrid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            botClientGrid.AllowUserToAddRows = false;
-            botClientGrid.AlternatingRowsDefaultCellStyle.BackColor = Color.LightGray;
-            botClientGrid.CellFormatting += botClientGrid_CellFormatting;
-            foreach (DataGridViewColumn column in botClientGrid.Columns)
+            runningBotClientsGrid.DataSource = _runningClientsViews;
+            runningBotClientsGrid.AutoGenerateColumns = true;
+            runningBotClientsGrid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            runningBotClientsGrid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            runningBotClientsGrid.AllowUserToAddRows = false;
+            runningBotClientsGrid.AlternatingRowsDefaultCellStyle.BackColor = Color.LightGray;
+            runningBotClientsGrid.CellFormatting += botClientGrid_CellFormatting;
+            foreach (DataGridViewColumn column in runningBotClientsGrid.Columns)
             {
                 column.ReadOnly = true;
             }
 
-            botClientGrid.Columns["IsSelected"].ReadOnly = false;
+            runningBotClientsGrid.Columns["IsSelected"].ReadOnly = false;
         }
 
         private void botClientGrid_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
         {
-            if (botClientGrid.Columns[e.ColumnIndex].Name == "Connected" && e.Value is bool connected)
-            {
-                e.CellStyle.BackColor = connected ? Color.LightGreen : Color.MistyRose;
-                e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
-            }
+            string columnName = runningBotClientsGrid.Columns[e.ColumnIndex].Name;
 
-            if (botClientGrid.Columns[e.ColumnIndex].Name == "State" && e.Value is string state)
+            if (columnName == "State" && e.Value is BotClientState state)
             {
-                if (state.Contains("Error"))
-                    e.CellStyle.BackColor = Color.IndianRed;
-                else if (state.Contains("Running"))
-                    e.CellStyle.BackColor = Color.LightGreen;
-                else if (state.Contains("Disconnected"))
-                    e.CellStyle.BackColor = Color.LightGray;
+                e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
+
+                switch (state)
+                {
+                    case BotClientState.Error:
+                        e.CellStyle.BackColor = Color.IndianRed;
+                        break;
+
+                    case BotClientState.RunQuest:
+                    case BotClientState.EnterQuest:
+                    case BotClientState.Trade:
+                    case BotClientState.BuyEctos:
+                        e.CellStyle.BackColor = Color.LightGreen;
+                        break;
+
+                    case BotClientState.Pause:
+                        e.CellStyle.BackColor = Color.LightYellow;
+                        break;
+
+                    case BotClientState.Disconnected:
+                        e.CellStyle.BackColor = Color.LightGray;
+                        break;
+
+                    case BotClientState.HardReset:
+                    case BotClientState.ResetQuest:
+                        e.CellStyle.BackColor = Color.LightBlue;
+                        break;
+
+                    case BotClientState.WaitCharacterSelect:
+                        e.CellStyle.BackColor = Color.Orange;
+                        break;
+
+                    default:
+                        e.CellStyle.BackColor = Color.White;
+                        break;
+                }
             }
         }
+
         private async void buttonStartSelectedClients_Click(object sender, EventArgs e)
         {
             startSelectBotClientsButton.Enabled = false;
@@ -146,8 +182,8 @@ namespace BotManager
                 string path = Path.Combine(Application.StartupPath, "clients.json");
                 var loadedClients = BotClientLoader.LoadFromJson(path);
 
-                _clients = new BindingList<BotClient>(loadedClients);
-                botClientCheckList.DataSource = _clients;
+                clients = new BindingList<BotClient>(loadedClients);
+                botClientCheckList.DataSource = clients;
                 botClientCheckList.DisplayMember = "CharacterName";
 
                 AppendLog("Bot clients geladen uit clients.json");
@@ -173,6 +209,37 @@ namespace BotManager
                 Invoke(new Action<string>(AppendLog), text);
             else
                 textBoxLog.AppendText($"{DateTime.Now:HH:mm:ss} >> {text}{Environment.NewLine}");
+        }
+
+        public void AddRunningBotClient(BotClientView view)
+        {
+            if (InvokeRequired)
+            {
+                Invoke(new Action<BotClientView>(AddRunningBotClient), view);
+                return;
+            }
+            _runningClientsViews.Add(view);
+
+            if (view.Source != null)
+            {
+                clients.Remove(view.Source);
+            }
+        }
+
+        public void RemoveRunningBotClient(BotClient client)
+        {
+            if (InvokeRequired)
+            {
+                Invoke(new Action<BotClient>(RemoveRunningBotClient), client);
+                return;
+            }
+
+            _runningClientsViews.Remove(client.View);
+
+            if (client != null)
+            {
+                clients.Add(client);
+            }
         }
 
         #region Button Clicks

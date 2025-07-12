@@ -11,12 +11,26 @@ public class TcpBotServer
 {
     private readonly BotManagerForm _form;
     private TcpListener _listener;
-    private readonly List<TcpClient> _clients = [];
 
     public TcpBotServer(BotManagerForm form)
     {
         _form = form;
     }
+
+    private static readonly Dictionary<int, BotClientState> StateIdMap = new()
+    {
+        [0] = BotClientState.Idle,
+        [1] = BotClientState.WaitCharacterSelect,
+        [2] = BotClientState.EnterQuest,
+        [3] = BotClientState.RunQuest,
+        [4] = BotClientState.ResetQuest,
+        [5] = BotClientState.HardReset,
+        [6] = BotClientState.BuyEctos,
+        [7] = BotClientState.Trade,
+        [8] = BotClientState.Disconnected,
+        [9] = BotClientState.Pause,
+        [10] = BotClientState.Error
+    };
 
     public async Task StartAsync(int port = 5000)
     {
@@ -26,70 +40,115 @@ public class TcpBotServer
 
         while (true)
         {
-            TcpClient client = await _listener.AcceptTcpClientAsync();
-            _clients.Add(client);
-
+            TcpClient tcpClient = await _listener.AcceptTcpClientAsync();
             _form.AppendLog("[Server] Nieuwe bot verbonden.");
-            _ = HandleClientAsync(client);
+            _ = HandleClientAsync(tcpClient);
         }
     }
-    private async Task HandleClientAsync(TcpClient client)
+
+    private async Task HandleClientAsync(TcpClient tcpClient)
     {
-        using NetworkStream stream = client.GetStream();
-        using StreamReader reader = new(stream, Encoding.UTF8);
-        using StreamWriter writer = new(stream, Encoding.UTF8) { AutoFlush = true };
+        var stream = tcpClient.GetStream();
+        byte[] buffer = new byte[1024];
+        BotClient? botClient = null;
 
         try
         {
-            while (true)
+            while (tcpClient.Connected)
             {
-                string line = await reader.ReadLineAsync();
-                if (line == null) break;
-
-                _form.AppendLog("[Ontvangen] " + line);
-
-                string[] parts = line.Split('|');
-                string command = parts[0];
-
-                switch (command)
+                int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
+                if (bytesRead == 0)
                 {
-                    case "IDENTIFY":
-                        _form.AppendLog($"→ Botnaam: {parts[1]}");
-                        break;
-
-                    case "TRADE_READY":
-                        _form.AppendLog($"→ Trade klaar van: {parts[1]}");
-                        break;
-
-                    case "STATS":
-                        _form.AppendLog($"→ Stats: {string.Join(", ", parts[1..])}");
-                        break;
-
-                    case "PING":
-                        await writer.WriteLineAsync("PONG");
-                        break;
-
-                    default:
-                        _form.AppendLog($"→ Onbekend commando: {command}");
-                        break;
+                    break;
                 }
 
-                // Terugkoppeling naar bot (optioneel)
-                await writer.WriteLineAsync($"ACK|{command}");
+                string message = Encoding.UTF8.GetString(buffer, 0, bytesRead).Trim();
+                //_form.AppendLog("[Client] " + message);
+
+                if (message.StartsWith("IDENTIFY"))
+                {
+                    string name = message.Substring("IDENTIFY|".Length).Trim();
+                    botClient = _form.clients.FirstOrDefault(c => c.CharacterName == name);
+                    if (botClient != null)
+                    {
+                        botClient.TcpConnection = tcpClient;
+                        _form.AppendLog($"[Manager] Bot '{name}' is now connected.");
+
+                        var view = new BotClientView
+                        {
+                            IsSelected = false,
+                            CharacterName = botClient.CharacterName,
+                            State = BotClientState.Unknown,
+                            Source = botClient
+                        };
+                        botClient.View = view;
+                        _form.AddRunningBotClient(view);
+                    }
+                    else
+                    {
+                        _form.AppendLog($"[Warning] Bot '{name}' not found in loaded client list.");
+                    }
+                }
+                else if (message.StartsWith("PONG"))
+                {
+                    if (botClient != null)
+                    {
+                        _form.pingManager.HandlePong(botClient);
+                        //_form.AppendLog($"[PONG] {botClient.CharacterName} responded.");
+                    }
+                    else
+                    {
+                        //_form.AppendLog($"[Warning] PONG from unknown bot.");
+                    }
+                }
+                else if (message.StartsWith("STATE|"))
+                {
+                    // Verwacht: STATE|<CharacterName>|<StateName>
+                    var parts = message.Split('|');
+                    if (parts.Length == 2 && int.TryParse(parts[1].Trim(), out int stateId))
+                    {
+
+                        if (botClient.View != null)
+                        {
+                            if (StateIdMap.TryGetValue(stateId, out var newState))
+                            {
+                                botClient.View.State = newState;
+                                _form.AppendLog($"[STATE] {botClient.CharacterName} updated to {newState}");
+                            }
+                            else
+                            {
+                                _form.AppendLog($"[STATE] Unknown state '{stateId}' for bot '{botClient.CharacterName}'");
+                            }
+                        }
+                        else
+                        {
+                            _form.AppendLog($"[STATE] BotClientView for '{botClient.CharacterName}' not found.");
+                        }
+                    }
+                    else
+                    {
+                        _form.AppendLog("[STATE] Invalid state message format.");
+                    }
+                }
             }
-        }
-        catch (IOException)
-        {
-            _form.AppendLog("[Verbinding] Client abrupt verbroken.");
         }
         catch (Exception ex)
         {
-            _form.AppendLog("[Fout] " + ex.Message);
+            _form.AppendLog($"[Error while reading] {ex.Message}");
         }
         finally
         {
-            client.Close();
-            _clients.Remove(client);
+            _form.AppendLog("[Disconnect] Client disconnected.");
+            if (botClient != null)
+            {
+                botClient.TcpConnection?.Close();
+                botClient.TcpConnection = null;
+                _form.RemoveRunningBotClient(botClient);
+            }
+            else
+            {
+                tcpClient.Close();
+            }
         }
     }
 }

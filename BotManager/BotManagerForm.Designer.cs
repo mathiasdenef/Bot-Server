@@ -37,7 +37,7 @@
             selectAllBotClientsButton = new Button();
             tabControl1 = new TabControl();
             tabPage1 = new TabPage();
-            botClientGrid = new DataGridView();
+            runningBotClientsGrid = new DataGridView();
             tabPage2 = new TabPage();
             dataGridView1 = new DataGridView();
             tabPage3 = new TabPage();
@@ -56,7 +56,7 @@
             groupBox1.SuspendLayout();
             tabControl1.SuspendLayout();
             tabPage1.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)botClientGrid).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)runningBotClientsGrid).BeginInit();
             tabPage2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dataGridView1).BeginInit();
             tabPage3.SuspendLayout();
@@ -65,13 +65,13 @@
             // 
             // textBoxLog
             // 
-            textBoxLog.Location = new Point(1111, 10);
+            textBoxLog.Location = new Point(944, 10);
             textBoxLog.Margin = new Padding(4, 5, 4, 5);
             textBoxLog.Multiline = true;
             textBoxLog.Name = "textBoxLog";
             textBoxLog.ReadOnly = true;
             textBoxLog.ScrollBars = ScrollBars.Vertical;
-            textBoxLog.Size = new Size(457, 779);
+            textBoxLog.Size = new Size(624, 779);
             textBoxLog.TabIndex = 4;
             // 
             // botClientCheckList
@@ -137,7 +137,7 @@
             // 
             // tabPage1
             // 
-            tabPage1.Controls.Add(botClientGrid);
+            tabPage1.Controls.Add(runningBotClientsGrid);
             tabPage1.Controls.Add(textBoxLog);
             tabPage1.Controls.Add(groupBox1);
             tabPage1.Location = new Point(4, 29);
@@ -150,14 +150,14 @@
             tabPage1.UseVisualStyleBackColor = true;
             tabPage1.Click += tabPage1_Click;
             // 
-            // botClientGrid
+            // runningBotClientsGrid
             // 
-            botClientGrid.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            botClientGrid.Location = new Point(283, 10);
-            botClientGrid.Name = "botClientGrid";
-            botClientGrid.RowHeadersWidth = 51;
-            botClientGrid.Size = new Size(821, 781);
-            botClientGrid.TabIndex = 16;
+            runningBotClientsGrid.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            runningBotClientsGrid.Location = new Point(275, 10);
+            runningBotClientsGrid.Name = "runningBotClientsGrid";
+            runningBotClientsGrid.RowHeadersWidth = 51;
+            runningBotClientsGrid.Size = new Size(662, 781);
+            runningBotClientsGrid.TabIndex = 16;
             // 
             // tabPage2
             // 
@@ -328,7 +328,7 @@
             tabControl1.ResumeLayout(false);
             tabPage1.ResumeLayout(false);
             tabPage1.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)botClientGrid).EndInit();
+            ((System.ComponentModel.ISupportInitialize)runningBotClientsGrid).EndInit();
             tabPage2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)dataGridView1).EndInit();
             tabPage3.ResumeLayout(false);
@@ -366,7 +366,7 @@
         private Button buttonSelectMultiLauncher;
         private Button buttonSelectScript;
         private Button selectAllBotClientsButton;
-        private DataGridView botClientGrid;
+        private DataGridView runningBotClientsGrid;
     }
 }
 
