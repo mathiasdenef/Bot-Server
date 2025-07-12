@@ -35,48 +35,48 @@ namespace BotManager
 
         public Client()
         { }
-        public void Start()
-        {
-            Connect();
-            Form1.form.Invoke(new MethodInvoker(delegate ()
-           {
-               this.clientViewModel.Running = "Yes";
-               Form1.form.clientList.Add(this);
-               Form1.form.checkedListBox1.Items.Remove(this.characterName);
-               Form1.form.checkedListBox2.Items.Add(this.characterName);
-               Form1.form.checkedListBox3.Items.Add(this.characterName);
-               Form1.form.dataGridView1.Refresh();
-           }));
-            Thread ctThread = new Thread(StartListening);
-            ctThread.Start();
-            Thread hearthBeatThread = new Thread(SendHeartBeat);
-            hearthBeatThread.Start();
-        }
+        //public void Start()
+        //{
+        //    Connect();
+        //    BotManager.form.Invoke(new MethodInvoker(delegate ()
+        //   {
+        //       this.clientViewModel.Running = "Yes";
+        //       BotManager.form.clientList.Add(this);
+        //       BotManager.form.botClientCheckList.Items.Remove(this.characterName);
+        //       BotManager.form.checkedListBox2.Items.Add(this.characterName);
+        //       BotManager.form.checkedListBox3.Items.Add(this.characterName);
+        //       BotManager.form.dataGridView1.Refresh();
+        //   }));
+        //    Thread ctThread = new Thread(StartListening);
+        //    ctThread.Start();
+        //    Thread hearthBeatThread = new Thread(SendHeartBeat);
+        //    hearthBeatThread.Start();
+        //}
 
-        public void Stop()
-        {
-            this.tcpClient = null;
-            Form1.form.Invoke(new MethodInvoker(delegate ()
-            {
-                this.clientViewModel.Running = "No";
-                Form1.form.clientList.Remove(this);
-                Form1.form.checkedListBox1.Items.Add(this.characterName);
-                Form1.form.checkedListBox2.Items.Remove(this.characterName);
-                Form1.form.checkedListBox3.Items.Remove(this.characterName);
-                Form1.form.dataGridView1.Refresh();
-            }));
+        //public void Stop()
+        //{
+        //    this.tcpClient = null;
+        //    BotManager.form.Invoke(new MethodInvoker(delegate ()
+        //    {
+        //        this.clientViewModel.Running = "No";
+        //        BotManager.form.clientList.Remove(this);
+        //        BotManager.form.botClientCheckList.Items.Add(this.characterName);
+        //        BotManager.form.checkedListBox2.Items.Remove(this.characterName);
+        //        BotManager.form.checkedListBox3.Items.Remove(this.characterName);
+        //        BotManager.form.dataGridView1.Refresh();
+        //    }));
 
-            Disconnect();
-        }
+        //    Disconnect();
+        //}
 
         public void Connect()
         {
-            Form1.Log(characterName + " connected!");
+            BotManagerForm.Log(characterName + " connected!");
         }
 
         public void Disconnect()
         {
-            Form1.Log(characterName + " disconnected!");
+            BotManagerForm.Log(characterName + " disconnected!");
         }
 
         private void StartListening()
@@ -103,10 +103,10 @@ namespace BotManager
                             this.clientViewModel.SuccesRuns = Convert.ToInt32(successRunsString.Substring(successRunsString.LastIndexOf('=') + 1));
                             var failRunsString = dataFromClientSplitted.Where(x => x.Contains("Fail Runs")).FirstOrDefault();
                             this.clientViewModel.FailRuns = Convert.ToInt32(failRunsString.Substring(failRunsString.LastIndexOf('=') + 1));
-                            Form1.form.Invoke(new MethodInvoker(delegate ()
+                            BotManagerForm.form.Invoke(new MethodInvoker(delegate ()
                             {
 
-                                Form1.form.dataGridView1.Refresh();
+                                BotManagerForm.form.dataGridView1.Refresh();
                             }));
                             break;
 
@@ -121,7 +121,7 @@ namespace BotManager
                 }
                 catch (Exception ex)
                 {
-                    Stop();
+                    //Stop();
                     break;
                 }
             }
@@ -152,9 +152,9 @@ namespace BotManager
 
         public void Log(string log)
         {
-            Form1.form.Invoke(new MethodInvoker(delegate ()
+            BotManagerForm.form.Invoke(new MethodInvoker(delegate ()
             {
-                Form1.form.textBoxLog.AppendText(" >> " + characterName + ": " + log + Environment.NewLine);
+                BotManagerForm.form.textBoxLog.AppendText(" >> " + characterName + ": " + log + Environment.NewLine);
             }));
         }
 

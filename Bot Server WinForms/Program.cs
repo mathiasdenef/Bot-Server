@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace Bot_Server_WinForms
+namespace BotManager
 {
     static class Program
     {

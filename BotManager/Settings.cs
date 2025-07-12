@@ -26,25 +26,25 @@ namespace BotManager
 
         public static void SetSourceListFileLocation(string location) {
             settings.sourceClientListFileLocation = location;
-            Form1.form.textBoxSelectedSourceAccounts.Text = settings.sourceClientListFileLocation;
+            BotManagerForm.form.textBoxSelectedSourceAccounts.Text = settings.sourceClientListFileLocation;
             Settings.writeToSettingsFile();
         }
         public static void SetMultiLauncherFileLocation(string location)
         {
             settings.multiLauncherFileLocation = location;
-            Form1.form.textBoxSelectedMultiLauncher.Text = settings.multiLauncherFileLocation;
+            BotManagerForm.form.textBoxSelectedMultiLauncher.Text = settings.multiLauncherFileLocation;
             Settings.writeToSettingsFile();
         }
         public static void SetScriptFileLocation(string location)
         {
             settings.scriptFileLocation = location;
-            Form1.form.textBoxSelectedScript.Text = settings.scriptFileLocation;
+            BotManagerForm.form.textBoxSelectedScript.Text = settings.scriptFileLocation;
             Settings.writeToSettingsFile();
         }
         public static void SetAutoLaunchFileLocation(string location)
         {
             settings.autoLaunchFileLocation = location;
-            Form1.form.textBoxSelectedAutoLaunch.Text = settings.autoLaunchFileLocation;
+            BotManagerForm.form.textBoxSelectedAutoLaunch.Text = settings.autoLaunchFileLocation;
             Settings.writeToSettingsFile();
         }
         public static string GetSourceListFileLocation()
@@ -94,22 +94,22 @@ namespace BotManager
                         {
                             case "Source Accounts":
                                 settings.sourceClientListFileLocation = fileLocation;
-                                Form1.form.textBoxSelectedSourceAccounts.Text = settings.sourceClientListFileLocation;
+                                BotManagerForm.form.textBoxSelectedSourceAccounts.Text = settings.sourceClientListFileLocation;
                                 break;
 
                             case "Multi Launcher":
                                 settings.multiLauncherFileLocation = fileLocation;
-                                Form1.form.textBoxSelectedMultiLauncher.Text = settings.multiLauncherFileLocation;
+                                BotManagerForm.form.textBoxSelectedMultiLauncher.Text = settings.multiLauncherFileLocation;
                                 break;
 
                             case "Script":
                                 settings.scriptFileLocation = fileLocation;
-                                Form1.form.textBoxSelectedScript.Text = settings.scriptFileLocation;
+                                BotManagerForm.form.textBoxSelectedScript.Text = settings.scriptFileLocation;
                                 break;
 
                             case "Auto Launch":
                                 settings.autoLaunchFileLocation = fileLocation;
-                                Form1.form.textBoxSelectedAutoLaunch.Text = settings.autoLaunchFileLocation;
+                                BotManagerForm.form.textBoxSelectedAutoLaunch.Text = settings.autoLaunchFileLocation;
                                 break;
 
                         }

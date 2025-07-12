@@ -87,7 +87,7 @@ namespace BotManager.Game_Launcher
 
                     //attempt to start gw process
                     gw.Start();
-                    Thread.Sleep(10000);
+                    Thread.Sleep(5000);
                     success = true;
                 }
                 catch (Exception e)

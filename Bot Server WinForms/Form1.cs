@@ -1,4 +1,4 @@
-﻿using Bot_Server_WinForms.Game_Launcher;
+﻿using BotManager.Game_Launcher;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -15,7 +15,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace Bot_Server_WinForms
+namespace BotManager
 {
 
     public partial class Form1 : Form

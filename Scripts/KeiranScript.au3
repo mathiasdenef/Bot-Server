@@ -63,6 +63,9 @@ GUISetState(@SW_SHOW)
 ;~ Global $fLog = FileOpen("Keiran - Runner " & $CharName & ".log", 1) ;Log file
 Global $CharacterName = $CmdLine[0] > 0 ? $CmdLine[1] : "Math Winning Games"
 $g_s_MainCharName = $CharacterName
+Global $WithStartup = $CmdLine[0] > 1 And $CmdLine[2] = "true"
+
+$g_b_FriendModuleInitialized = True
 
 Global $gwpid = -1
 
@@ -81,7 +84,7 @@ Global $questMapId = 849
 
 Global $mwaypoints[15][4] = [[9413, -7116, "1", 1250], [7526, -8410, "2", 1250], [4864, -8845, "3", 1250], [3438, -10528, "4", 1250], [2916, -11867, "5", 1250], [1749, -12765, "6", 1250], [266, -13059, "7", 1250], [-691, -12911, "8", 1250], [-2500, -11420, "9", 1250], [-4434, -12314, "10", 1250], [-6580, -9653, "11", 1250], [-10554, -8844, "12", 1250], [-12841, -8030, "13", 1250], [-15876, -8903, "14", 1250], [-17109, -8978, "Final Area 15", 1250]]
 
-Global Enum $STATE_IDLE, $STATE_ENTERQUEST, $STATE_RUNQUEST, $STATE_RESETQUEST, $STATE_HARDRESET, $STATE_BUYECTOS, $STATE_TRADE, $STATE_DISCONNECTED, $STATE_PAUSE, $STATE_ERROR
+Global Enum $STATE_IDLE, $STATE_WAITCHARACTERSELECT, $STATE_ENTERQUEST, $STATE_RUNQUEST, $STATE_RESETQUEST, $STATE_HARDRESET, $STATE_BUYECTOS, $STATE_TRADE, $STATE_DISCONNECTED, $STATE_PAUSE, $STATE_ERROR
 Global $BotState = $STATE_IDLE
 
 Global $g_bRenderingEnabled = True
@@ -108,6 +111,14 @@ GUICtrlSetOnEvent($CheckboxGraphics, "EventHandler")
 ;~ GUICtrlSetOnEvent($ButtonResetSocket, "EventHandler")
 GUISetOnEvent($gui_event_close, "EventHandler")
 
+If $WithStartup Then
+	Do
+		Sleep(500)
+	Until IsString(Scanner_GetLoggedCharNames()) And Scanner_GetLoggedCharNames() <> ""
+
+	Initialize()
+EndIf
+
 While 1
 	If $BotState <> $STATE_IDLE Then
 		HandleBotState()
@@ -120,15 +131,23 @@ Func EventHandler()
 		Case $ButtonStart
 			Initialize()
 		Case $CheckboxGraphics
-			clearmemory()
-			togglerendering()
+			Ui_ToggleRendering_()
 		Case $ButtonDebug1
-			Out(Agent_GetAgentInfo(-2, "HP") > 0)
-			Out(IsAlive())
-			Out(Agent_GetAgentInfo(-2, "CurrentHP"))
-			Out(Agent_GetAgentInfo(-2, "MaxHP"))
+			If Core_Initialize("Math Winning Games", True) Then
+				Out("Core_Initialize successful")
+			Else
+				Out("Core_Initialize failed")
+			EndIf
 		Case $ButtonDebug2
-			SetBotState($STATE_DISCONNECTED)
+			Out("PreGame_FrameID: " & PreGame_FrameID())
+			Out("PreGame_ChosenCharacterIndex: " & PreGame_ChosenCharacterIndex())
+			Out("PreGame_ChosenCharacter: " & PreGame_ChosenCharacter())
+			Out("PreGame_Index2: " & PreGame_Index2())
+			Out("PreGame_LoginCharacterArray: " & PreGame_LoginCharacterArray())
+			Out("PreGame_CharName 0: " & PreGame_CharName(0))
+			Out("Scanner_ScanForCharname(): " & Scanner_ScanForCharname())
+			Out("Scanner_GetLoggedCharNames(): " & Scanner_GetLoggedCharNames())
+			;~ SetBotState($STATE_DISCONNECTED)
 		Case $gui_event_close
 			Exit
 	EndSwitch
@@ -144,6 +163,12 @@ Func HandleBotState()
 	EndIf
 
 	Switch $BotState
+		Case $STATE_WAITCHARACTERSELECT
+			If Step_WaitCharacterSelect() Then
+				SetBotState($STATE_ENTERQUEST)
+			Else
+				SetBotState($STATE_ERROR)
+			EndIf
 		Case $STATE_ENTERQUEST
 			If Step_EnterQuest() Then
 				SetBotState($STATE_RUNQUEST)
@@ -202,11 +227,26 @@ Func Initialize()
 	$g_tBotTotalTime = TimerInit()
 	AdlibRegister("UpdateTimersUI", 1000)
 	UpdateStatsUI()
-	SetBotState($STATE_ENTERQUEST)
+	If (PreGame_FrameID() <> 0) Then ; If frameID <> 0, im still in characterSelect
+		SetBotState($STATE_WAITCHARACTERSELECT) 
+	Else
+		;~ Friend_SetOfflineStatus()
+		SetBotState($STATE_ENTERQUEST)
+	EndIf
+EndFunc
+
+Func Step_WaitCharacterSelect() 
+	Out("--Executing step: WaitCharacterSelect--")
+	ControlSend(Core_GetGuildWarsWindow(), "", "", "{Enter}")
+	If Not WaitMapLoading() Then Return False
+	Sleep(2000)
+	;~ Friend_SetOfflineStatus()
+	Return True
 EndFunc
 
 Func Step_EnterQuest()
 	Out("--Executing step: EnterQuest--")
+	
 	UpdateStatsUI()
 	WaitMapLoading()
 	Other_PingSleep(3000)
@@ -247,6 +287,7 @@ Func Step_RunQuest()
 		$g_iSuccessRuns += 1
 		Out("Finished a run: " & FormatMsToTimeString(TimerDiff($g_tBotRunTime)))
 		UpdateRunTimes()
+		Ui_PurgeHook_()
 	Else
 		$g_iFailRuns += 1
 	EndIf
@@ -844,6 +885,8 @@ Func CountItemInInventory($iTargetModelID)
 
 	For $iBag = 1 To 4
 		Local $aItems = Item_GetBagItemArray($iBag)
+		If Not IsArray($aItems) Then ContinueLoop
+
 		$iBagItems = $aItems[0]
 		For $iSlot = 1 To $iBagItems
 			$pItem = Item_GetItemBySlot($iBag, $iSlot)

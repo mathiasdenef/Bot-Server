@@ -1,0 +1,26 @@
+[
+  {
+    "characterName": "Bob Danaerys",
+    "email": "angularmaster1@hotmail.com",
+    "password": "Orian425",
+    "gameClientPath": "C:\\Program Files (x86)\\Guild Wars\\Guild Wars #2\\Gw.exe"
+  },
+  {
+    "characterName": "Dylan Master One",
+    "email": "angularmaster2@hotmail.com",
+    "password": "Orian425",
+    "gameClientPath": "C:\\Program Files (x86)\\Guild Wars\\Guild Wars #3\\Gw.exe"
+  },
+  {
+    "characterName": "Nora Bolara",
+    "email": "angularmaster3@hotmail.com",
+    "password": "Orian425",
+    "gameClientPath": "C:\\Program Files (x86)\\Guild Wars\\Guild Wars #4\\Gw.exe"
+  },
+  {
+    "characterName": "Bert Dekerk",
+    "email": "angularmaster4@hotmail.com",
+    "password": "Orian425",
+    "gameClientPath": "C:\\Program Files (x86)\\Guild Wars\\Guild Wars #5\\Gw.exe"
+  }
+]

@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace Bot_Server_WinForms.Properties
+namespace BotManager.Properties
 {
 
 

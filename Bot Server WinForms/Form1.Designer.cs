@@ -1,4 +1,4 @@
-﻿namespace Bot_Server_WinForms
+﻿namespace BotManager
 {
     partial class Form1
     {

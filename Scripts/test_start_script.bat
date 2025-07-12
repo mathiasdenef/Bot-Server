@@ -1,0 +1,1 @@
+start "" "C:\Program Files (x86)\AutoIt3\AutoIt3.exe" "%~dp0KeiranScript.au3" "Bob Danaerys" True
